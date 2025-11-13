@@ -28,7 +28,7 @@ print("Browser Selenium berhasil dijalankan.")
 
 # === Konfigurasi Awal ===
 # Ganti URL ini ke kategori paling atas yang ingin Anda scrape
-start_url = "https://www.gramedia.com/categories/buku"
+start_url = "https://www.gramedia.com/categories/buku/desain"
 output_file = "hasil_scrape_gramedia.xlsx"
 
 # ----------------------------------------------------
@@ -304,10 +304,12 @@ def save_products_to_excel(product_links, url_kategori="", is_lainnya=False):
 
 
 # --------------------------------------
-# 🔹 Fungsi rekursif: jelajahi kategori
+# 🔹 Fungsi rekursif: jelajahi kategori (VERSI MODIFIKASI)
 # --------------------------------------
 def crawl_category(url):
-    """Fungsi utama rekursif untuk menjelajahi dan scrape kategori."""
+    """Fungsi utama rekursif untuk menjelajahi dan scrape kategori.
+    VERSI MODIFIKASI: Mendahulukan subkategori sebelum scrape "Lainnya".
+    """
     global total_books_scraped, visited_products
     
     if url in visited_categories:
@@ -339,9 +341,25 @@ def crawl_category(url):
     soup = BeautifulSoup(driver.page_source, "html.parser")
     
     # ---------------------------------
-    # 2. CEK & SCROLL Grid "Lainnya di kategori ini" (SCENARIO B - cth: subk.html)
+    # 2. Ambil referensi untuk subkategori & grid "Lainnya"
+    #    (Kita perlu ini untuk logika if/elif di bawah)
     # ---------------------------------
     parent_product_list_container = soup.find(attrs={'data-testid': 'categoriesParentProductList'})
+    subcats = get_subcategories(soup, url)
+
+    # ---------------------------------
+    # 3. UTAMAKAN: Selami Subkategori (SCENARIO A & B)
+    #    (Blok ini sekarang dieksekusi SEBELUM "Lainnya")
+    # ---------------------------------
+    if subcats:
+        print(f"📂 Ditemukan {len(subcats)} subkategori. Melanjutkan penjelajahan (prioritas)...")
+        for sub in subcats:
+            crawl_category(sub) # Panggil diri sendiri (rekursif)
+    
+    # ---------------------------------
+    # 4. KEMUDIAN: Cek & SCROLL Grid "Lainnya di kategori ini" (SCENARIO B)
+    #    (Blok ini sekarang dieksekusi SETELAH subkategori selesai)
+    # ---------------------------------
     if parent_product_list_container:
         print(f"📚 Ditemukan bagian 'Lainnya di kategori ini'. Memuat semua produk (infinite scroll)...")
         try:
@@ -364,7 +382,7 @@ def crawl_category(url):
                 # Scroll ke anchor
                 driver.execute_script("arguments[0].scrollIntoView();", anchor)
                 print(f"🔄 Scrolling ke bawah... (produk: {current_product_count})")
-                time.sleep(3) # Tunggu 3 detik untuk produk baru
+                time.sleep(1) # Tunggu 1 detik untuk produk baru
 
         except Exception as e:
             print(f"⚠️ Selesai/Error saat scrolling 'Lainnya di kategori ini'. Mungkin sudah di akhir.")
@@ -375,20 +393,11 @@ def crawl_category(url):
         
         print(f"   → Ditemukan {len(products_parent)} link produk unik di 'Lainnya'.")
         # Panggil save_products_to_excel DENGAN flag is_lainnya=True
+        # Buku yang sudah ada di visited_products (dari subkategori) akan otomatis dilewati.
         save_products_to_excel(products_parent, url_kategori=url, is_lainnya=True)
 
     # ---------------------------------
-    # 3. CEK & SELAMI Subkategori (SCENARIO A & B)
-    # ---------------------------------
-    subcats = get_subcategories(soup, url)
-    
-    if subcats:
-        print(f"📂 Ditemukan {len(subcats)} subkategori. Melanjutkan penjelajahan...")
-        for sub in subcats:
-            crawl_category(sub) # Panggil diri sendiri (rekursif)
-    
-    # ---------------------------------
-    # 4. CEK Halaman Daun / Leaf Page (SCENARIO C)
+    # 5. TERAKHIR: CEK Halaman Daun / Leaf Page (SCENARIO C)
     # (Jika TIDAK ada grid "Lainnya" DAN TIDAK ada subkategori)
     # ---------------------------------
     elif not parent_product_list_container and not subcats:

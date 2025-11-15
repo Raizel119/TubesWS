@@ -271,17 +271,25 @@ def homepage():
     
     
     # --- BARU: Buat daftar filter aktif ---
+    # --- BARU: Buat daftar filter aktif (Logika Diperbaiki) ---
     active_filters = []
-    # Urutan ini penting: SubSub, Sub, Cat, Lang
-    if selected_sub_sub_category:
-        active_filters.append({'value': selected_sub_sub_category})
-    elif selected_sub_category:
-        active_filters.append({'value': selected_sub_category})
-    elif selected_category:
-        active_filters.append({'value': selected_category})
+
+    # Level 1: Kategori (akan selalu ada jika salah satu sub-nya dipilih)
+    if current_selected_cat:
+        active_filters.append({'type': 'filter', 'value': current_selected_cat})
         
+    # Level 2: Sub-Kategori (hanya jika sub atau sub-sub dipilih)
+    if current_selected_sub:
+        active_filters.append({'type': 'filter', 'value': current_selected_sub})
+
+    # Level 3: Sub-Sub-Kategori (hanya jika sub-sub dipilih)
+    if selected_sub_sub_category:
+        active_filters.append({'type': 'filter', 'value': selected_sub_sub_category})
+        
+    # Filter Bahasa (terpisah)
     if selected_language:
-        active_filters.append({'value': selected_language})
+        active_filters.append({'type': 'lang', 'value': selected_language})
+    # -----------------------------------
     # -----------------------------------
 
     

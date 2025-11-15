@@ -534,6 +534,10 @@ a {
     cursor: pointer;
     border-radius: 4px;
 }
+
+.filter-item:hover {
+    background-color: var(--light-bg); /* Warna abu-abu muda */
+}
 .filter-item input[type="radio"] {
     display: inline-block; 
     margin-right: 10px; 

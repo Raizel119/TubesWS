@@ -269,12 +269,28 @@ def homepage():
         for cat in ALL_CATEGORIES:
             grouped_books[cat] = [b for b in BOOKS_DB if b['category'] == cat][:4]
     
+    
+    # --- BARU: Buat daftar filter aktif ---
+    active_filters = []
+    # Urutan ini penting: SubSub, Sub, Cat, Lang
+    if selected_sub_sub_category:
+        active_filters.append({'value': selected_sub_sub_category})
+    elif selected_sub_category:
+        active_filters.append({'value': selected_sub_category})
+    elif selected_category:
+        active_filters.append({'value': selected_category})
+        
+    if selected_language:
+        active_filters.append({'value': selected_language})
+    # -----------------------------------
+
+    
     return render_template(
         'index.html', 
-        books=filtered_books, # Ini adalah hasil filter
-        grouped_books=grouped_books, # Ini untuk rak homepage
+        books=filtered_books, 
+        grouped_books=grouped_books, 
         
-        nested_category_map=NESTED_CATEGORY_MAP, # Kirim peta BARU
+        nested_category_map=NESTED_CATEGORY_MAP, 
         all_languages=ALL_LANGUAGES,
         all_categories=ALL_CATEGORIES,
         
@@ -286,7 +302,9 @@ def homepage():
         current_filter=filter_param, 
         current_lang=lang_param or 'all',
         current_selected_cat=current_selected_cat,
-        current_selected_sub=current_selected_sub
+        current_selected_sub=current_selected_sub,
+        
+        active_filters=active_filters # BARU: Kirim daftar filter aktif
     )
 
 # --- Rute Detail ---

@@ -184,14 +184,28 @@
                         </div>
                     </form>
                 </div>
-
-                {% if current_filter or search_query or current_lang != 'all' or selected_sort_price %}
+{% if current_filter or search_query or current_lang != 'all' or selected_sort_price %}
+                    
                     <div class="results-header-count">
                         Menampilkan <strong>{{ results_count }}</strong> dari <strong>{{ total_count }}</strong> produk
                         {% if search_query %}
                             untuk "<strong>{{ search_query }}</strong>"
                         {% endif %}
                     </div>
+                    
+                    {% if active_filters|length > 0 %}
+                    <div class="active-filters-container">
+                        <a href="/" class="filter-pill clear-all">
+                            <span>&times;</span>
+                        </a>
+                        {% for filter in active_filters %}
+                            <div class="filter-pill">
+                                <i class="fas fa-tag icon-tag"></i>
+                                <span>{{ filter.value }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                     <div class="results-grid">
                         {% for book in books %}
                             <div class="book-card-small">

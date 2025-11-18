@@ -13,11 +13,24 @@
 
     <header class="navbar">
         <div class="container">
-            <a href="/" class="navbar-brand">📚 Perpus Digital</a>
-            <nav class="navbar-nav">
-                <a href="/">Home</a>
-                <a href="#">Tentang Kami</a>
-                <a href="#">Kontak</a>
+            <div class="navbar-left">
+                <a href="/" class="navbar-brand">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Bookara Logo">
+                </a>
+                <div class="dropdown">
+                    <a href="/" class="nav-link">Kategori <span class="arrow"></span></a>
+                    <div class="dropdown-content">
+                        {% for cat in all_categories %}
+                            <a href="/?filter=cat_{{ cat }}">{{ cat }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="navbar-right">
+                <a href="/" class="nav-link active">Home</a>
+                <a href="#" class="nav-link">About Us</a>
+                <a href="#" class="nav-link">Contact</a>
             </nav>
         </div>
     </header>
@@ -31,11 +44,53 @@
         </div>
     </main>
 
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 Perpus Digital. Dibuat dengan Flask & ❤️</p>
+   
+   <footer class="footer">
+        <div class="footer-top">
+            <div class="footer-logo">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Bookora" />
+            </div>
+            <div class="footer-tagline">
+                Search Smarter. Read Better.
+            </div>
         </div>
-    </footer>
-
+        <div class="footer-container">
+            <div class="footer-column">
+                <h3>Company</h3>
+                <a href="#">Home</a>
+                <a href="#">About Us</a>
+                <a href="#">Kategori</a>
+                <a href="#">Contact</a>
+            </div>
+            <div class="footer-column">
+                <h3>Support</h3>
+                <a href="#">Help Center</a>
+                <a href="#">How It Works</a>
+                <a href="#">Report an Issue</a>
+            </div>
+            <div class="footer-column">
+                <h3>Legal</h3>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+                <a href="#">Cookie Policy</a>
+                <a href="#">Content Guidelines</a>
+            </div>
+            <div class="footer-column">
+                <h3>Contact Information</h3>
+                <a href="#">Email Support</a>
+                <a href="#">Business Inquiries</a>
+                <p style="margin-top:10px; font-weight:600">Social Media Links:</p>
+                <div class="social-icons">
+                    <i class="fab fa-instagram"></i>
+                    <i class="fab fa-x-twitter"></i>
+                    <i class="fab fa-facebook"></i>
+                    <i class="fab fa-linkedin"></i>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            © 2025 Bookora. All rights reserved.
+        </div>
+   </footer>
 </body>
 </html>

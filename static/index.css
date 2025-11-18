@@ -94,13 +94,14 @@ a {
 .dropdown-content {
     display: none;
     position: absolute;
-    top: 150%; 
+    top: 100%; /* DIUBAH: Posisikan tepat di bawah */
     left: 0;
     background-color: var(--white);
     min-width: 200px;
     box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     border-radius: 8px;
     z-index: 100;
+    padding-top: 15px; /* BARU: Ini adalah 'jembatan' tak terlihat */
 }
 .dropdown-content a {
     display: block;
@@ -120,7 +121,7 @@ a {
 /* ======== HERO CAROUSEL ======== */
 .hero-carousel {
     width: 100%;
-    height: 350px;
+    height: 400px;
     background-color: #f0f0f0; 
     overflow: hidden;
     position: relative;
@@ -179,12 +180,12 @@ a {
 }
 #slide-2 {
     /* Ganti dengan gambar lain jika ada */
-    background-image: url('/static/img/banner-2.jpg'); 
+    background-image: url('/static/img/banner1.jpg'); 
     background-color: #e0e0e0; /* Fallback jika gambar gagal */
 }
 #slide-3 {
     /* Ganti dengan gambar lain jika ada */
-    background-image: url('/static/img/banner-3.jpg'); 
+    background-image: url('/static/img/banner2.jpg'); 
     background-color: #d0d0d0; /* Fallback jika gambar gagal */
 }
 
@@ -370,6 +371,25 @@ a {
 .filter-wrapper {
     display: inline-block;
 }
+#urutkan {
+    border: 1px solid var(--border-color); /* <-- Ini border-nya */
+    border-radius: 12px; /* Sudut membulat */
+    padding: 8px 18px;
+}
+
+#urutkan:hover .dropdown-content {
+    display: block;
+}
+#urutkan .dropdown-content {
+    top: 100%; /* DIUBAH: Posisikan tepat di bawah */
+    left: 0;
+    right: 0; 
+    width: 100%;
+    min-width: 0;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    padding-top: 10px; /* BARU: 'Jembatan' tak terlihat */
+}
+
 .filter-box {
     position: relative;
     border: 1px solid #e5e5e5;
@@ -386,7 +406,7 @@ a {
 }
 .filter-select {
     width: 100%;
-    padding: 5px 0;
+    padding: 2px 0;
     border: none;
     outline: none;
     font-size: 16px;
@@ -395,6 +415,7 @@ a {
     appearance: none;
     cursor: pointer;
 }
+
 .filter-box::after {
     content: "▾";
     position: absolute;
@@ -950,8 +971,10 @@ a {
     .hero-carousel {
         height: 250px;
     }
+   
     .slide-content h1 {
         font-size: 1.8em;
+        
     }
     .book-list-horizontal {
         gap: 8px;

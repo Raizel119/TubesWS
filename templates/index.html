@@ -45,23 +45,23 @@
                     <div class="slide-content">
                         <h1>Explore Great Books</h1>
                         <p>Temukan dunia baru di setiap halaman.</p>
-                        <a href="/search" class="btn-primary">Mulai Jelajah</a>
+                        
                     </div>
                 </div>
                 
                 <div class="slide" id="slide-2">
                     <div class="slide-content">
-                        <h1>Buku Terlaris Minggu Ini</h1>
-                        <p>Jangan lewatkan koleksi terbaik kami.</p>
-                        <a href="/search" class="btn-primary">Lihat Sekarang</a>
+                        <h1>Find Your Book Match</h1>
+                        <p>Pilih bacaan yang paling sesuai dengan minat dan gaya Anda.</p>
+                       
                     </div>
                 </div>
                 
                 <div class="slide" id="slide-3">
                     <div class="slide-content">
-                        <h1>Promo Spesial</h1>
-                        <p>Dapatkan diskon hingga 50%</p>
-                        <a href="/search" class="btn-primary">Belanja Promo</a>
+                        <h1>Browse by Category</h1>
+                        <p>Pilih kategori favorit Anda untuk menemukan bacaan yang tepat.</p>
+                       
                     </div>
                 </div>
             </div>
@@ -169,20 +169,22 @@
                         </div>
                     </div>
                 
-                    <form action="/" method="GET" class="filter-wrapper">
-                        <input type="hidden" name="query" value="{{ search_query or '' }}">
-                        <input type="hidden" name="filter" value="{{ current_filter or '' }}">
-                        <input type="hidden" name="lang" value="{{ current_lang or 'all' }}">
-                        
-                        <div class="filter-box">
-                            <label class="filter-label">Urutkan</label>
-                            <select name="sort_price" class="filter-select" onchange="this.form.submit()">
-                                <option value="">Terbaru</option>
-                                <option value="asc" {% if selected_sort_price == 'asc' %}selected{% endif %}>Harga Terendah</option>
-                                <option value="desc" {% if selected_sort_price == 'desc' %}selected{% endif %}>Harga Tertinggi</option>
-                            </select>
+               <div class="dropdown" id="urutkan">
+                        <a href="#" class="nav-link dropdown-toggle" >
+                            <span class="filter-label">Urutkan <span class="arrow"></span></span></a></span>
+                            <span>
+                                {% if selected_sort_price == 'asc' %}Harga Terendah
+                                {% elif selected_sort_price == 'desc' %}Harga Tertinggi
+                                {% else %}Terbaru
+                                {% endif %}
+                            </span>
+                            <span class="arrow-down"></span> </a>
+                        <div class="dropdown-content">
+                            <a href="/?sort_price=&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}">Terbaru</a>
+                            <a href="/?sort_price=asc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}">Harga Terendah</a>
+                            <a href="/?sort_price=desc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}">Harga Tertinggi</a>
                         </div>
-                    </form>
+                    </div>
                 </div>
 {% if current_filter or search_query or current_lang != 'all' or selected_sort_price %}
                     

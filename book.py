@@ -28,7 +28,7 @@ print("Browser Selenium berhasil dijalankan.")
 
 # === Konfigurasi Awal ===
 # Ganti URL ini ke kategori paling atas yang ingin Anda scrape
-start_url = "https://www.gramedia.com/categories/buku/desain"
+start_url = "https://www.gramedia.com/categories/ebook"
 output_file = "hasil_scrape_gramedia.xlsx"
 
 # ----------------------------------------------------
@@ -209,7 +209,7 @@ def scrape_book(url):
                 elif label_text == "Panjang": data_buku['Panjang'] = value_text
                 elif label_text == "Berat": data_buku['Berat'] = value_text
         
-        print(f"✅ Selesai scrape: {data_buku['Judul']}")
+        print(f"✅ Done: {data_buku['Judul']}")
         return data_buku
     except Exception as e:
         print(f"❌ Error scrape {url}: {e}")
@@ -317,7 +317,7 @@ def crawl_category(url):
 
     print(f"\n🌿 Menjelajah kategori: {url}")
     driver.get(url)
-    time.sleep(2) # Waktu tunggu dasar agar halaman memuat
+    time.sleep(1) # Waktu tunggu dasar agar halaman memuat
     
     # ---------------------------------
     # 1. CEK & KLIK "Muat Lebih Banyak" UNTUK KATEGORI (SCENARIO A - cth: kat.html)
@@ -417,7 +417,7 @@ def crawl_category(url):
             try:
                 # Cari tombol "Muat Lebih Banyak" umum
                 load_more_products_button = WebDriverWait(driver, 5).until(
-                    EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Muat Lebih Banyak')]"))
+                    EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='productListLoadMore']"))
                 )
                 
                 # Pastikan ini BUKAN tombol kategori

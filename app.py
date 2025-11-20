@@ -1,333 +1,224 @@
 from flask import Flask, render_template, request, abort
-import json
+from rdflib import Graph, Namespace, RDF
+import re
 
 app = Flask(__name__)
 
-# --- Mock Database (Data Diperbarui dengan 3 Level) ---
-BOOKS_DB = [
-    {
-        "id": 1,
-        "title": "Laskar Pelangi",
-        "author": "Andrea Hirata",
-        "category": "Buku",
-        "sub_category": "Fiksi",
-        "sub_sub_category": "Sastra",
-        "price": 85000,
-        "language": "Indonesia",
-        "description": "Kisah inspiratif...",
-        "publisher": "Bentang Pustaka",
-        "image_url": "https://cdn.gramedia.com/uploads/items/9786022911145_Laskar-Pelangi.jpg"
-    },
-    {
-        "id": 2,
-        "title": "Bumi Manusia",
-        "author": "Pramoedya Ananta Toer",
-        "category": "Buku",
-        "sub_category": "Fiksi",
-        "sub_sub_category": "Fiksi Historis",
-        "price": 120000,
-        "language": "Indonesia",
-        "description": "Bagian pertama...",
-        "publisher": "Hasta Mitra",
-        "image_url": "https://cdn.gramedia.com/uploads/items/9786020638521_Bumi-Manusia.jpg"
-    },
-    {
-        "id": 3,
-        "title": "Sapiens: A Brief History",
-        "author": "Yuval Noah Harari",
-        "category": "International Book",
-        "sub_category": "History",
-        "sub_sub_category": "World History",
-        "price": 280000,
-        "language": "Inggris",
-        "description": "Buku yang mengubah cara pandang...",
-        "publisher": "Harvill Secker",
-        "image_url": "https://cdn.gramedia.com/uploads/items/img20210217_13333010.jpg"
-    },
-    {
-        "id": 4,
-        "title": "The Hobbit",
-        "author": "J.R.R. Tolkien",
-        "category": "International Book",
-        "sub_category": "Fiction",
-        "sub_sub_category": "Fantasy",
-        "price": 210000,
-        "language": "Inggris",
-        "description": "Petualangan Bilbo Baggins...",
-        "publisher": "George Allen & Unwin",
-        "image_url": "https://cdn.gramedia.com/uploads/items/the_hobbit.jpg"
-    },
-    {
-        "id": 5,
-        "title": "Jurnal Prisma: Sejarah Terbuka",
-        "author": "Tim Editor",
-        "category": "Majalah",
-        "sub_category": "Sosial",
-        "sub_sub_category": "Ekonomi",
-        "price": 125000,
-        "language": "Indonesia",
-        "description": "Jurnal pemikiran sosial...",
-        "publisher": "LP3ES",
-        "image_url": "https://cdn.gramedia.com/uploads/items/9786239955376_Jurnal-Prisma-Sejarah-Terbuka.jpg"
-    },
-    {
-        "id": 6,
-        "title": "Now I Can Tell My Feeling",
-        "author": "Yoon Jihyun",
-        "category": "Ebook",
-        "sub_category": "Self-Healing",
-        "sub_sub_category": "Psychology",
-        "price": 75000,
-        "language": "Indonesia",
-        "description": "Ebook self-healing...",
-        "publisher": "Penerbit B",
-        "image_url": "https://cdn.gramedia.com/uploads/items/Cover_Now_I_Can_Tell_My_Feeling_1.jpg"
-    },
-    {
-        "id": 7,
-        "title": "Gadis Kretek",
-        "author": "Ratih Kumala",
-        "category": "Buku",
-        "sub_category": "Fiksi",
-        "sub_sub_category": "Fiksi Historis",
-        "price": 89000,
-        "language": "Indonesia",
-        "description": "Kisah cinta dan intrik...",
-        "publisher": "Gramedia Pustaka Utama",
-        "image_url": "https://cdn.gramedia.com/uploads/items/Gadis_Kretek.jpg"
-    },
-    {
-        "id": 8,
-        "title": "Harry Potter dan Batu Bertuah",
-        "author": "J.K. Rowling",
-        "category": "Buku",
-        "sub_category": "Fiksi",
-        "sub_sub_category": "Fantasi",
-        "price": 150000,
-        "language": "Indonesia",
-        "description": "Awal petualangan...",
-        "publisher": "Bloomsbury Publishing",
-        "image_url": "https://cdn.gramedia.com/uploads/items/9789791011860_harry-potter-dan-batu-bertuah.jpeg"
-    },
-    {
-        "id": 9,
-        "title": "Fiksi Agama", # Buku palsu untuk sub-kategori Fiksi
-        "author": "Author Agama",
-        "category": "Buku",
-        "sub_category": "Fiksi",
-        "sub_sub_category": "Agama",
-        "price": 90000,
-        "language": "Indonesia",
-        "description": "Deskripsi...",
-        "publisher": "Penerbit",
-        "image_url": "https://cdn.gramedia.com/uploads/items/9786230009916_hidup_itu_indah_tertawalah.jpg"
-    },
-     {
-        "id": 10,
-        "title": "Fiksi Anak", # Buku palsu untuk sub-kategori
-        "author": "Author Anak",
-        "category": "Buku",
-        "sub_category": "Fiksi Anak & Remaja",
-        "sub_sub_category": "Novel Remaja",
-        "price": 90000,
-        "language": "Indonesia",
-        "description": "Deskripsi...",
-        "publisher": "Penerbit",
-        "image_url": "https://cdn.gramedia.com/uploads/items/9786230009916_hidup_itu_indah_tertawalah.jpg"
-    },
-    {
-        "id": 11,
-        "title": "Parenting", # Buku palsu untuk sub-kategori
-        "author": "Author Parenting",
-        "category": "Buku",
-        "sub_category": "Keluarga dan Hubungan",
-        "sub_sub_category": "Parenting",
-        "price": 90000,
-        "language": "Indonesia",
-        "description": "Deskripsi...",
-        "publisher": "Penerbit",
-        "image_url": "https://cdn.gramedia.com/uploads/items/9786230009916_hidup_itu_indah_tertawalah.jpg"
-    },
-]
+# ====== CACHE GLOBAL ======
+rdf_graph = None
+cached_books = None
 
-# --- BARU: Buat Peta Hierarkis 3-Level ---
-NESTED_CATEGORY_MAP = {}
-for book in BOOKS_DB:
-    cat = book['category']
-    sub_cat = book.get('sub_category')
-    sub_sub_cat = book.get('sub_sub_category')
-
-    if cat not in NESTED_CATEGORY_MAP:
-        NESTED_CATEGORY_MAP[cat] = {}
-    
-    if sub_cat and sub_cat not in NESTED_CATEGORY_MAP[cat]:
-        NESTED_CATEGORY_MAP[cat][sub_cat] = set() # Gunakan set untuk menghindari duplikat
-    
-    if sub_cat and sub_sub_cat:
-        NESTED_CATEGORY_MAP[cat][sub_cat].add(sub_sub_cat)
-
-# Ubah set menjadi list yang diurutkan
-for cat, sub_map in NESTED_CATEGORY_MAP.items():
-    for sub_cat, sub_sub_set in sub_map.items():
-        NESTED_CATEGORY_MAP[cat][sub_cat] = sorted(list(sub_sub_set))
-# -------------------------------------------
-
-ALL_LANGUAGES = sorted(list(set(book['language'] for book in BOOKS_DB)))
-ALL_CATEGORIES = sorted(list(NESTED_CATEGORY_MAP.keys()))
+# ====== HELPERS ======
+def parse_price_to_number(price_str):
+    """
+    Contoh input: "Rp107.000" atau "Rp 25.350"
+    Return float: 107000.0 or 25350.0
+    Jika gagal, return None
+    """
+    if not price_str:
+        return None
+    # ambil angka dan hapus pemisah ribuan (.) dan koma
+    s = str(price_str)
+    # Hapus anything selain digit
+    digits = re.sub(r"[^\d]", "", s)
+    if not digits:
+        return None
+    try:
+        return float(digits)
+    except:
+        return None
 
 
-# --- RUTE BARU: Homepage (Sekarang menjadi halaman utama DAN pencarian) ---
-@app.route('/')
-def homepage():
-    query = request.args.get('query')
-    sort_price = request.args.get('sort_price')
-    
-    # --- LOGIKA FILTER 3-LEVEL BARU ---
-    filter_param = request.args.get('filter')
-    selected_category = None
-    selected_sub_category = None
-    selected_sub_sub_category = None # BARU
-    
-    if filter_param:
-        if filter_param.startswith('cat_'):
-            selected_category = filter_param.replace('cat_', '', 1)
-        elif filter_param.startswith('sub_'):
-            selected_sub_category = filter_param.replace('sub_', '', 1)
-        elif filter_param.startswith('subsub_'): # BARU
-            selected_sub_sub_category = filter_param.replace('subsub_', '', 1)
+# ====== LOAD RDF SEKALI ======
+def load_rdf():
+    global rdf_graph
+    if rdf_graph is None:
+        rdf_graph = Graph()
+        # file RDF: RDF/XML → set format xml agar lebih robust
+        rdf_graph.parse("DataBukuGramedia.rdf", format="xml")
+    return rdf_graph
 
-    lang_param = request.args.get('lang')
-    selected_language = None
-    
-    if lang_param and lang_param != 'all':
-        selected_language = lang_param
-    # -----------------------------
 
-    total_count = len(BOOKS_DB)
-    filtered_books = BOOKS_DB
+# ====== EXTRACT ALL BOOKS SEKALI ======
+def extract_books():
+    """
+    Kembalikan list dict, setiap dict berisi semua properti dari RDF
+    Keys mengikuti nama predikat setelah '#', mis: 'Judul', 'Penulis', 'Harga', dst.
+    """
+    global cached_books
 
-    if query:
-        search_query = query.lower()
-        filtered_books = [
-            book for book in filtered_books
-            if search_query in book['title'].lower() or \
-               search_query in book['author'].lower()
-        ]
-    if selected_category:
-        filtered_books = [
-            book for book in filtered_books
-            if book['category'] == selected_category
-        ]
-    if selected_sub_category:
-        filtered_books = [
-            book for book in filtered_books
-            if book.get('sub_category') == selected_sub_category
-        ]
-    if selected_sub_sub_category: # BARU
-        filtered_books = [
-            book for book in filtered_books
-            if book.get('sub_sub_category') == selected_sub_sub_category
-        ]
-    if selected_language:
-        filtered_books = [
-            book for book in filtered_books
-            if book['language'] == selected_language
-        ]
+    if cached_books is not None:
+        return cached_books
 
-    results_count = len(filtered_books)
+    g = load_rdf()
+    BU = Namespace("http://buku.org/buku#")
 
-    if sort_price == 'asc':
-        filtered_books = sorted(filtered_books, key=lambda b: b['price'])
-    elif sort_price == 'desc':
-        filtered_books = sorted(filtered_books, key=lambda b: b['price'], reverse=True)
+    books = []
 
-    # --- Mempersiapkan data untuk Jinja `open` dan `checked` ---
+    # Ambil semua subject yang rdf:type bu:Buku
+    for subj in g.subjects(RDF.type, BU.Buku):
+        b = {"id": str(subj).split("#")[-1], "uri": str(subj)}
+        # ambil semua predikat-objek
+        for p, o in g.predicate_objects(subj):
+            key = str(p).split("#")[-1]  # nama after #
+            b[key] = str(o)
+        # normalize harga numeric
+        b["Harga_num"] = parse_price_to_number(b.get("Harga"))
+        # juga standar nama field bahasa/ukuran agar template mudah dipanggil
+        books.append(b)
+
+    cached_books = books
+    return books
+
+
+# ====== GENERATE MULTILEVEL CATEGORY ======
+def generate_category_tree(books):
+    nested = {}
+    for b in books:
+        cat1 = b.get("KategoriUtama")
+        sub1 = b.get("Subkategori1")
+        sub2 = b.get("Subkategori2")
+
+        if not cat1:
+            continue
+
+        nested.setdefault(cat1, {})
+
+        if sub1:
+            nested[cat1].setdefault(sub1, [])
+            if sub2 and sub2 not in nested[cat1][sub1]:
+                nested[cat1][sub1].append(sub2)
+
+    return nested
+
+
+# ====== ROUTE HALAMAN UTAMA ======
+@app.route("/")
+def index():
+    all_books = extract_books()
+    books = list(all_books)  # salinan untuk filter
+
+    # Ambil parameter
+    search_query = request.args.get("query", "").strip()
+    search_query_lower = search_query.lower()
+    current_filter = request.args.get("filter")
+    current_lang = request.args.get("lang", "all")
+    selected_sort_price = request.args.get("sort_price")
+
+    # ==== SEARCH ====
+    if search_query:
+        def matches_search(b):
+            judul = b.get("Judul", "")
+            penulis = b.get("Penulis", "")
+            return (search_query_lower in judul.lower()) or (search_query_lower in penulis.lower())
+        books = [b for b in books if matches_search(b)]
+
+    # ==== FILTER KATEGORI / SUB / SUBSUB ====
+    if current_filter:
+        try:
+            filter_type, value = current_filter.split("_", 1)
+        except ValueError:
+            filter_type, value = None, None
+
+        if filter_type == "cat":
+            books = [b for b in books if b.get("KategoriUtama") == value]
+        elif filter_type == "sub":
+            books = [
+                b for b in books
+                if b.get("Subkategori1") == value or b.get("Subkategori2") == value
+            ]
+        elif filter_type == "subsub":
+            books = [b for b in books if b.get("Subkategori2") == value]
+
+    # ==== FILTER BAHASA ====
+    if current_lang != "all":
+        books = [b for b in books if b.get("Bahasa") == current_lang]
+
+    # ==== SORTING HARGA ====
+    if selected_sort_price:
+        # keep only those that have harga_num
+        books = [b for b in books if b.get("Harga_num") is not None]
+        if selected_sort_price == "asc":
+            books.sort(key=lambda x: x["Harga_num"])
+        elif selected_sort_price == "desc":
+            books.sort(key=lambda x: x["Harga_num"], reverse=True)
+
+    # ==== SIDEBAR KATEGORI / BAHASA ====
+    nested_category_map = generate_category_tree(all_books)
+    all_categories = sorted({b.get("KategoriUtama") for b in all_books if b.get("KategoriUtama")})
+    all_languages = sorted({b.get("Bahasa") for b in all_books if b.get("Bahasa") and b.get("Bahasa") != "-"})
+
+    # ==== GROUP BOOKS PER KATEGORI (HOME SECTION) ====
+    grouped_books = {
+        cat: [b for b in all_books if b.get("KategoriUtama") == cat][:10]
+        for cat in nested_category_map
+    }
+
+    # ==== COUNTS ====
+    total_count = len(all_books)
+    results_count = len(books)
+
+    # ==== ACTIVE FILTERS (format sederhana) ====
+    active_filters = []
+    if search_query:
+        active_filters.append({"value": search_query})
+    if current_filter:
+        # show friendly label (remove prefix)
+        active_filters.append({"value": current_filter})
+    if current_lang != "all":
+        active_filters.append({"value": current_lang})
+
     current_selected_cat = None
     current_selected_sub = None
-    
-    if selected_category:
-        current_selected_cat = selected_category
-    elif selected_sub_category:
-        for cat, sub_map in NESTED_CATEGORY_MAP.items():
-            if selected_sub_category in sub_map:
-                current_selected_cat = cat
-                current_selected_sub = selected_sub_category
-                break
-    elif selected_sub_sub_category:
-        for cat, sub_map in NESTED_CATEGORY_MAP.items():
-            for sub, subsub_list in sub_map.items():
-                if selected_sub_sub_category in subsub_list:
-                    current_selected_cat = cat
-                    current_selected_sub = sub
-                    break
-            if current_selected_cat:
-                break
-    
-    # Kelompokkan buku untuk rak (hanya jika tidak ada filter aktif)
-    grouped_books = {}
-    if not (query or filter_param or lang_param or sort_price):
-        for cat in ALL_CATEGORIES:
-            grouped_books[cat] = [b for b in BOOKS_DB if b['category'] == cat][:4]
-    
-    
-    # --- BARU: Buat daftar filter aktif ---
-    # --- BARU: Buat daftar filter aktif (Logika Diperbaiki) ---
-    active_filters = []
+    if current_filter and current_filter.startswith("cat_"):
+        current_selected_cat = current_filter.replace("cat_", "")
+    if current_filter and current_filter.startswith("sub_"):
+        current_selected_sub = current_filter.replace("sub_", "")
 
-    # Level 1: Kategori (akan selalu ada jika salah satu sub-nya dipilih)
-    if current_selected_cat:
-        active_filters.append({'type': 'filter', 'value': current_selected_cat})
-        
-    # Level 2: Sub-Kategori (hanya jika sub atau sub-sub dipilih)
-    if current_selected_sub:
-        active_filters.append({'type': 'filter', 'value': current_selected_sub})
-
-    # Level 3: Sub-Sub-Kategori (hanya jika sub-sub dipilih)
-    if selected_sub_sub_category:
-        active_filters.append({'type': 'filter', 'value': selected_sub_sub_category})
-        
-    # Filter Bahasa (terpisah)
-    if selected_language:
-        active_filters.append({'type': 'lang', 'value': selected_language})
-    # -----------------------------------
-    # -----------------------------------
-
-    
     return render_template(
-        'index.html', 
-        books=filtered_books, 
-        grouped_books=grouped_books, 
-        
-        nested_category_map=NESTED_CATEGORY_MAP, 
-        all_languages=ALL_LANGUAGES,
-        all_categories=ALL_CATEGORIES,
-        
-        results_count=results_count,
+        "index.html",
+        books=books,
+        grouped_books=grouped_books,
+        all_categories=all_categories,
+        all_languages=all_languages,
+        nested_category_map=nested_category_map,
         total_count=total_count,
-        search_query=query,
-        selected_sort_price=sort_price,
-        
-        current_filter=filter_param, 
-        current_lang=lang_param or 'all',
+        results_count=results_count,
+        current_filter=current_filter,
+        current_lang=current_lang,
+        search_query=search_query,
+        selected_sort_price=selected_sort_price,
+        active_filters=active_filters,
         current_selected_cat=current_selected_cat,
-        current_selected_sub=current_selected_sub,
-        
-        active_filters=active_filters # BARU: Kirim daftar filter aktif
+        current_selected_sub=current_selected_sub
     )
 
-# --- Rute Detail ---
-@app.route('/book/<int:book_id>')
-def book_detail(book_id):
-    book = next((b for b in BOOKS_DB if b['id'] == book_id), None)
-    if book is None:
-        abort(404)
-    # Kirim kategori utama untuk dropdown navbar
-    return render_template('detail.html', book=book, all_categories=ALL_CATEGORIES)
 
-@app.errorhandler(404)
-def page_not_found(e):
-    # Buat file 404.html jika Anda belum memilikinya
-    return render_template('404.html'), 404 
+# ====== GET SINGLE BOOK ======
+def get_book_by_id(book_id):
+    """
+    Ambil data dari cache (cached_books). Jika tidak ditemukan return {}
+    """
+    books = extract_books()
+    for b in books:
+        if b.get("id") == book_id:
+            return b
+    return {}
 
-if __name__ == '__main__':
+
+# ====== ROUTE DETAIL ======
+@app.route("/book/<book_id>")
+def detail(book_id):
+    book = get_book_by_id(book_id)
+    if not book:
+        abort(404, description="Buku tidak ditemukan")
+
+    # kirim all_categories agar navbar tetap berfungsi
+    all_books = extract_books()
+    all_categories = sorted({b.get("KategoriUtama") for b in all_books if b.get("KategoriUtama")})
+
+    return render_template("detail.html", book=book, all_categories=all_categories)
+
+
+if __name__ == "__main__":
     app.run(debug=True)

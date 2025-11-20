@@ -213,11 +213,14 @@
                             <div class="book-card-small">
                                 <a href="/book/{{ book.id }}" class="card-link">
                                     <div class="card-image">
-                                        <img src="/static/img/cover.avif" alt="{{ book.title }}">
+                                        <img src="/static/img/cover.avif" alt="{{ book['Judul'] }}">
                                     </div>
                                     <div class="card-content">
-                                        <p class="author">{{ book.author }}</p>
-                                        <h5 class="title">{{ book.title }}</h5>
+                                        <p class="author">{{ book['Penulis'] }}</p>
+                                        <h5 class="title">{{ book['Judul'] }}</h5>
+                                        {% if book['Harga'] %}
+                                        <p class="price">{{ book['Harga'] }}</p>
+                                        {% endif %}
                                     </div>
                                 </a>
                             </div>
@@ -241,11 +244,14 @@
                             <div class="book-card-small">
                                 <a href="/book/{{ book.id }}" class="card-link">
                                     <div class="card-image">
-                                        <img src="/static/img/cover.avif" alt="{{ book.title }}">
+                                        <img src="/static/img/cover.avif" alt="{{ book['Judul'] }}">
                                     </div>
                                     <div class="card-content">
-                                        <p class="author">{{ book.author }}</p>
-                                        <h4 class="title">{{ book.title }}</h4>
+                                        <p class="author">{{ book['Penulis'] }}</p>
+                                        <h4 class="title">{{ book['Judul'] }}</h4>
+                                        {% if book['Harga'] %}
+                                        <p class="price">{{ book['Harga'] }}</p>
+                                        {% endif %}
                                     </div>
                                 </a>
                             </div>

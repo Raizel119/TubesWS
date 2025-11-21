@@ -213,7 +213,7 @@
                             <div class="book-card-small">
                                 <a href="/book/{{ book.id }}" class="card-link">
                                     <div class="card-image">
-                                        <img src="/static/img/cover.avif" alt="{{ book['Judul'] }}">
+                                        <img src="{{ book.Gambar }}" alt="{{ book['Judul'] }}">
                                     </div>
                                     <div class="card-content">
                                         <p class="author">{{ book['Penulis'] }}</p>
@@ -244,7 +244,7 @@
                             <div class="book-card-small">
                                 <a href="/book/{{ book.id }}" class="card-link">
                                     <div class="card-image">
-                                        <img src="/static/img/cover.avif" alt="{{ book['Judul'] }}">
+                                        <img src="{{ book.Gambar }}" alt="{{ book['Judul'] }}">
                                     </div>
                                     <div class="card-content">
                                         <p class="author">{{ book['Penulis'] }}</p>

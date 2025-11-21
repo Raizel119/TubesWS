@@ -1,179 +1,206 @@
 from flask import Flask, render_template, request, abort
-from rdflib import Graph, Namespace, RDF
-import re
+from SPARQLWrapper import SPARQLWrapper, JSON
 
 app = Flask(__name__)
 
-# ====== CACHE GLOBAL ======
-rdf_graph = None
-cached_books = None
+# Sesuaikan endpoint dataset Fuseki-mu:
+FUSEKI_URL = "http://localhost:3030/bookara/query"
 
-# ====== HELPERS ======
-def parse_price_to_number(price_str):
-    """
-    Contoh input: "Rp107.000" atau "Rp 25.350"
-    Return float: 107000.0 or 25350.0
-    Jika gagal, return None
-    """
-    if not price_str:
-        return None
-    # ambil angka dan hapus pemisah ribuan (.) dan koma
-    s = str(price_str)
-    # Hapus anything selain digit
-    digits = re.sub(r"[^\d]", "", s)
-    if not digits:
-        return None
-    try:
-        return float(digits)
-    except:
-        return None
+# Prefix yang dipakai di query
+PREFIX = """
+PREFIX bu: <http://buku.org/buku#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+"""
 
+# -----------------------
+# Helper: run SPARQL query
+# -----------------------
+def run_query(query):
+    sparql = SPARQLWrapper(FUSEKI_URL)
+    sparql.setQuery(PREFIX + "\n" + query)
+    sparql.setReturnFormat(JSON)
+    return sparql.query().convert()["results"]["bindings"]
 
-# ====== LOAD RDF SEKALI ======
-def load_rdf():
-    global rdf_graph
-    if rdf_graph is None:
-        rdf_graph = Graph()
-        # file RDF: RDF/XML → set format xml agar lebih robust
-        rdf_graph.parse("DataBukuGramedia.rdf", format="xml")
-    return rdf_graph
+# -----------------------
+# Map raw SPARQL row -> dict
+# keys match template usage (Judul, Penulis, Harga, etc.)
+# -----------------------
+def map_book_row(row):
+    # ambil Gambar dari RDF
+    gambar = row.get("Gambar", {}).get("value", "")
+    if not gambar:
+        gambar = "/static/img/cover.avif"  # fallback default
 
-
-# ====== EXTRACT ALL BOOKS SEKALI ======
-def extract_books():
-    """
-    Kembalikan list dict, setiap dict berisi semua properti dari RDF
-    Keys mengikuti nama predikat setelah '#', mis: 'Judul', 'Penulis', 'Harga', dst.
-    """
-    global cached_books
-
-    if cached_books is not None:
-        return cached_books
-
-    g = load_rdf()
-    BU = Namespace("http://buku.org/buku#")
-
-    books = []
-
-    # Ambil semua subject yang rdf:type bu:Buku
-    for subj in g.subjects(RDF.type, BU.Buku):
-        b = {"id": str(subj).split("#")[-1], "uri": str(subj)}
-        # ambil semua predikat-objek
-        for p, o in g.predicate_objects(subj):
-            key = str(p).split("#")[-1]  # nama after #
-            b[key] = str(o)
-        # normalize harga numeric
-        b["Harga_num"] = parse_price_to_number(b.get("Harga"))
-        # juga standar nama field bahasa/ukuran agar template mudah dipanggil
-        books.append(b)
-
-    cached_books = books
-    return books
-
-
-# ====== GENERATE MULTILEVEL CATEGORY ======
-def generate_category_tree(books):
-    nested = {}
-    for b in books:
-        cat1 = b.get("KategoriUtama")
-        sub1 = b.get("Subkategori1")
-        sub2 = b.get("Subkategori2")
-
-        if not cat1:
-            continue
-
-        nested.setdefault(cat1, {})
-
-        if sub1:
-            nested[cat1].setdefault(sub1, [])
-            if sub2 and sub2 not in nested[cat1][sub1]:
-                nested[cat1][sub1].append(sub2)
-
-    return nested
-
-
-# ====== ROUTE HALAMAN UTAMA ======
-@app.route("/")
-def index():
-    all_books = extract_books()
-    books = list(all_books)  # salinan untuk filter
-
-    # Ambil parameter
-    search_query = request.args.get("query", "").strip()
-    search_query_lower = search_query.lower()
-    current_filter = request.args.get("filter")
-    current_lang = request.args.get("lang", "all")
-    selected_sort_price = request.args.get("sort_price")
-
-    # ==== SEARCH ====
-    if search_query:
-        def matches_search(b):
-            judul = b.get("Judul", "")
-            penulis = b.get("Penulis", "")
-            return (search_query_lower in judul.lower()) or (search_query_lower in penulis.lower())
-        books = [b for b in books if matches_search(b)]
-
-    # ==== FILTER KATEGORI / SUB / SUBSUB ====
-    if current_filter:
-        try:
-            filter_type, value = current_filter.split("_", 1)
-        except ValueError:
-            filter_type, value = None, None
-
-        if filter_type == "cat":
-            books = [b for b in books if b.get("KategoriUtama") == value]
-        elif filter_type == "sub":
-            books = [
-                b for b in books
-                if b.get("Subkategori1") == value or b.get("Subkategori2") == value
-            ]
-        elif filter_type == "subsub":
-            books = [b for b in books if b.get("Subkategori2") == value]
-
-    # ==== FILTER BAHASA ====
-    if current_lang != "all":
-        books = [b for b in books if b.get("Bahasa") == current_lang]
-
-    # ==== SORTING HARGA ====
-    if selected_sort_price:
-        # keep only those that have harga_num
-        books = [b for b in books if b.get("Harga_num") is not None]
-        if selected_sort_price == "asc":
-            books.sort(key=lambda x: x["Harga_num"])
-        elif selected_sort_price == "desc":
-            books.sort(key=lambda x: x["Harga_num"], reverse=True)
-
-    # ==== SIDEBAR KATEGORI / BAHASA ====
-    nested_category_map = generate_category_tree(all_books)
-    all_categories = sorted({b.get("KategoriUtama") for b in all_books if b.get("KategoriUtama")})
-    all_languages = sorted({b.get("Bahasa") for b in all_books if b.get("Bahasa") and b.get("Bahasa") != "-"})
-
-    # ==== GROUP BOOKS PER KATEGORI (HOME SECTION) ====
-    grouped_books = {
-        cat: [b for b in all_books if b.get("KategoriUtama") == cat][:10]
-        for cat in nested_category_map
+    return {
+        "id": row.get("id", {}).get("value", "").split("#")[-1],
+        "Judul": row.get("Judul", {}).get("value", ""),
+        "Penulis": row.get("Penulis", {}).get("value", ""),
+        "Harga": row.get("Harga", {}).get("value", ""),
+        "KategoriUtama": row.get("KategoriUtama", {}).get("value", ""),
+        "Subkategori1": row.get("Sub1", {}).get("value", ""),
+        "Subkategori2": row.get("Sub2", {}).get("value", ""),
+        "Gambar": gambar
     }
 
-    # ==== COUNTS ====
-    total_count = len(all_books)
-    results_count = len(books)
 
-    # ==== ACTIVE FILTERS (format sederhana) ====
-    active_filters = []
-    if search_query:
-        active_filters.append({"value": search_query})
+# -----------------------
+# Load lists used by templates
+# -----------------------
+def load_categories():
+    q = """
+    SELECT DISTINCT ?cat WHERE {
+        ?b bu:KategoriUtama ?cat .
+    }
+    ORDER BY ?cat
+    """
+    rows = run_query(q)
+    return [r["cat"]["value"] for r in rows]
+
+def load_languages():
+    q = """
+    SELECT DISTINCT ?lang WHERE {
+        ?b bu:Bahasa ?lang .
+    }
+    ORDER BY ?lang
+    """
+    rows = run_query(q)
+    return [r["lang"]["value"] for r in rows]
+
+def load_nested_map():
+    """
+    Return nested_category_map format expected by index.html:
+    { category: { sub1: [sub2a, sub2b], sub1b: [...] }, ... }
+    """
+    q = """
+    SELECT DISTINCT ?cat ?sub1 ?sub2 WHERE {
+        ?b bu:KategoriUtama ?cat .
+        OPTIONAL { ?b bu:Subkategori1 ?sub1 . }
+        OPTIONAL { ?b bu:Subkategori2 ?sub2 . }
+    }
+    ORDER BY ?cat ?sub1 ?sub2
+    """
+    rows = run_query(q)
+    nested = {}
+    for r in rows:
+        cat = r["cat"]["value"]
+        sub1 = r.get("sub1", {}).get("value")
+        sub2 = r.get("sub2", {}).get("value")
+        if cat not in nested:
+            nested[cat] = {}
+        if sub1:
+            nested[cat].setdefault(sub1, [])
+            if sub2:
+                if sub2 not in nested[cat][sub1]:
+                    nested[cat][sub1].append(sub2)
+    return nested
+
+# -----------------------
+# Generic book fetcher used by index/search
+# -----------------------
+def get_books(search_query="", current_filter="", current_lang="all", selected_sort_price=""):
+    # sanitize minimal (escape double quotes)
+    sq = search_query.replace('"', '\\"')
+
+    filter_clauses = []
+    # filters based on filter param (cat_, sub_, subsub_)
     if current_filter:
-        # show friendly label (remove prefix)
-        active_filters.append({"value": current_filter})
-    if current_lang != "all":
-        active_filters.append({"value": current_lang})
+        if current_filter.startswith("cat_"):
+            val = current_filter.replace("cat_", "")
+            filter_clauses.append(f'?b bu:KategoriUtama "{val}" .')
+        elif current_filter.startswith("sub_"):
+            val = current_filter.replace("sub_", "")
+            # check in either Subkategori1 or Subkategori2
+            filter_clauses.append(f'FILTER(?Sub1 = "{val}" || ?Sub2 = "{val}")')
+        elif current_filter.startswith("subsub_"):
+            val = current_filter.replace("subsub_", "")
+            filter_clauses.append(f'?b bu:Subkategori2 "{val}" .')
 
-    current_selected_cat = None
-    current_selected_sub = None
-    if current_filter and current_filter.startswith("cat_"):
-        current_selected_cat = current_filter.replace("cat_", "")
-    if current_filter and current_filter.startswith("sub_"):
-        current_selected_sub = current_filter.replace("sub_", "")
+    if current_lang != "all":
+        filter_clauses.append(f'?b bu:Bahasa "{current_lang}" .')
+
+    search_clause = ""
+    if sq:
+        search_clause = f'''
+        FILTER(
+            CONTAINS(LCASE(?Judul), LCASE("{sq}")) ||
+            CONTAINS(LCASE(?Penulis), LCASE("{sq}"))
+        )
+        '''
+
+    order_clause = ""
+    if selected_sort_price == "asc":
+        order_clause = "ORDER BY xsd:decimal(REPLACE(REPLACE(?Harga, 'Rp', ''), '.', ''))"
+    elif selected_sort_price == "desc":
+        order_clause = "ORDER BY DESC(xsd:decimal(REPLACE(REPLACE(?Harga, 'Rp', ''), '.', '')))"
+
+    # build FILTER area
+    filters_block = "\n".join(filter_clauses) + ("\n" + search_clause if search_clause else "")
+
+    q = f"""
+    SELECT ?id ?Judul ?Penulis ?Harga ?KategoriUtama ?Sub1 ?Sub2 ?Gambar WHERE {{
+        ?b rdf:type bu:Buku .
+        ?b bu:Judul ?Judul .
+        OPTIONAL {{ ?b bu:Penulis ?Penulis . }}
+        OPTIONAL {{ ?b bu:Harga ?Harga . }}
+        OPTIONAL {{ ?b bu:KategoriUtama ?KategoriUtama . }}
+        OPTIONAL {{ ?b bu:Subkategori1 ?Sub1 . }}
+        OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
+        OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
+
+        BIND(STRAFTER(STR(?b), "#") AS ?id)
+
+        {filters_block}
+    }}
+    {order_clause}
+    LIMIT 100
+    """
+    rows = run_query(q)
+    return [map_book_row(r) for r in rows]
+
+def group_books_by_category(all_books):
+    grouped = {}
+    for b in all_books:
+        cat = b.get("KategoriUtama") or "Uncategorized"
+        grouped.setdefault(cat, [])
+        grouped[cat].append(b)
+    # limit first 10 per category as in template
+    return {k: v[:10] for k, v in grouped.items()}
+
+def build_active_filters(current_filter, current_lang, search_query):
+    active = []
+    if search_query:
+        active.append({"value": search_query})
+    if current_filter:
+        active.append({"value": current_filter})
+    if current_lang and current_lang != "all":
+        active.append({"value": current_lang})
+    return active
+
+# -----------------------
+# ROUTES
+# -----------------------
+@app.route("/")
+def index():
+    # read params (so template logic that checks them works)
+    search_query = request.args.get("query", "")
+    current_filter = request.args.get("filter", "")
+    current_lang = request.args.get("lang", "all")
+    selected_sort_price = request.args.get("sort_price", "")
+
+    # fetch books (for results or home shelf)
+    books = get_books(search_query, current_filter, current_lang, selected_sort_price)
+
+    # fetch lists needed by template
+    all_categories = load_categories()
+    all_languages = load_languages()
+    nested_category_map = load_nested_map()
+
+    # For home grouped shelves — use all books (no filters) to populate; if you want use dataset top items, adjust
+    all_books_for_shelves = get_books("", "", "all", "")
+    grouped_books = group_books_by_category(all_books_for_shelves)
+
+    active_filters = build_active_filters(current_filter, current_lang, search_query)
 
     return render_template(
         "index.html",
@@ -182,43 +209,110 @@ def index():
         all_categories=all_categories,
         all_languages=all_languages,
         nested_category_map=nested_category_map,
-        total_count=total_count,
-        results_count=results_count,
+        total_count=len(all_books_for_shelves),
+        results_count=len(books),
         current_filter=current_filter,
         current_lang=current_lang,
         search_query=search_query,
         selected_sort_price=selected_sort_price,
         active_filters=active_filters,
-        current_selected_cat=current_selected_cat,
-        current_selected_sub=current_selected_sub
+        current_selected_cat=current_filter.replace("cat_", "") if current_filter.startswith("cat_") else None,
+        current_selected_sub=current_filter.replace("sub_", "") if current_filter.startswith("sub_") else None
     )
 
+@app.route("/search")
+def search():
+    search_query = request.args.get("query", "")
+    current_filter = request.args.get("filter", "")
+    current_lang = request.args.get("lang", "all")
+    selected_sort_price = request.args.get("sort_price", "")
 
-# ====== GET SINGLE BOOK ======
-def get_book_by_id(book_id):
+    books = get_books(search_query, current_filter, current_lang, selected_sort_price)
+
+    all_categories = load_categories()
+    all_languages = load_languages()
+    nested_category_map = load_nested_map()
+    grouped_books = group_books_by_category(get_books("", "", "all", ""))
+
+    return render_template(
+        "search.html",
+        books=books,
+        search_query=search_query,
+        current_filter=current_filter,
+        current_lang=current_lang,
+        selected_sort_price=selected_sort_price,
+        nested_category_map=nested_category_map,
+        all_categories=all_categories,
+        all_languages=all_languages,
+        total_count=len(get_books("", "", "all", "")),
+        results_count=len(books)
+    )
+
+@app.route("/book/<id>")
+def detail(id):
+    # detail query
+    q = f"""
+    SELECT ?Judul ?Penulis ?Harga ?KategoriUtama
+           ?Sub1 ?Sub2 ?Penerbit ?TanggalTerbit ?ISBN ?Halaman ?Bahasa
+           ?Panjang ?Lebar ?Berat ?Format ?Deskripsi ?Gambar
+    WHERE {{
+        ?b rdf:type bu:Buku .
+        FILTER(STRAFTER(STR(?b), "#") = "{id}")
+        OPTIONAL {{ ?b bu:Judul ?Judul . }}
+        OPTIONAL {{ ?b bu:Penulis ?Penulis . }}
+        OPTIONAL {{ ?b bu:Harga ?Harga . }}
+        OPTIONAL {{ ?b bu:KategoriUtama ?KategoriUtama . }}
+        OPTIONAL {{ ?b bu:Subkategori1 ?Sub1 . }}
+        OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
+        OPTIONAL {{ ?b bu:Penerbit ?Penerbit . }}
+        OPTIONAL {{ ?b bu:TanggalTerbit ?TanggalTerbit . }}
+        OPTIONAL {{ ?b bu:ISBN ?ISBN . }}
+        OPTIONAL {{ ?b bu:Halaman ?Halaman . }}
+        OPTIONAL {{ ?b bu:Bahasa ?Bahasa . }}
+        OPTIONAL {{ ?b bu:Panjang ?Panjang . }}
+        OPTIONAL {{ ?b bu:Lebar ?Lebar . }}
+        OPTIONAL {{ ?b bu:Berat ?Berat . }}
+        OPTIONAL {{ ?b bu:Format ?Format . }}
+        OPTIONAL {{ ?b bu:Deskripsi ?Deskripsi . }}
+        OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
+    }}
+    LIMIT 1
     """
-    Ambil data dari cache (cached_books). Jika tidak ditemukan return {}
-    """
-    books = extract_books()
-    for b in books:
-        if b.get("id") == book_id:
-            return b
-    return {}
+    rows = run_query(q)
+    if not rows:
+        abort(404)
+    r = rows[0]
+    # produce book dict with keys matching template
+    book = {
+        "Judul": r.get("Judul", {}).get("value", ""),
+        "Penulis": r.get("Penulis", {}).get("value", ""),
+        "Harga": r.get("Harga", {}).get("value", ""),
+        "KategoriUtama": r.get("KategoriUtama", {}).get("value", ""),
+        "Subkategori1": r.get("Sub1", {}).get("value", ""),
+        "Subkategori2": r.get("Sub2", {}).get("value", ""),
+        "Penerbit": r.get("Penerbit", {}).get("value", ""),
+        "TanggalTerbit": r.get("TanggalTerbit", {}).get("value", ""),
+        "ISBN": r.get("ISBN", {}).get("value", ""),
+        "Halaman": r.get("Halaman", {}).get("value", ""),
+        "Bahasa": r.get("Bahasa", {}).get("value", ""),
+        "Panjang": r.get("Panjang", {}).get("value", ""),
+        "Lebar": r.get("Lebar", {}).get("value", ""),
+        "Berat": r.get("Berat", {}).get("value", ""),
+        "Format": r.get("Format", {}).get("value", ""),
+        "Deskripsi": r.get("Deskripsi", {}).get("value", ""),
+        "Gambar": r.get("Gambar", {}).get("value", "/static/img/cover.avif"),
+        "id": id
+    }
 
+    all_categories = load_categories()
+    nested_category_map = load_nested_map()
 
-# ====== ROUTE DETAIL ======
-@app.route("/book/<book_id>")
-def detail(book_id):
-    book = get_book_by_id(book_id)
-    if not book:
-        abort(404, description="Buku tidak ditemukan")
-
-    # kirim all_categories agar navbar tetap berfungsi
-    all_books = extract_books()
-    all_categories = sorted({b.get("KategoriUtama") for b in all_books if b.get("KategoriUtama")})
-
-    return render_template("detail.html", book=book, all_categories=all_categories)
-
+    return render_template(
+        "detail.html",
+        book=book,
+        all_categories=all_categories,
+        nested_category_map=nested_category_map
+    )
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

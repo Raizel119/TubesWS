@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, abort
 from SPARQLWrapper import SPARQLWrapper, JSON
 from urllib.parse import quote
+from flask import jsonify
 
 # --- IMPORT FILE QUERIES YANG BARU DIBUAT ---
 import queries 
@@ -74,7 +75,7 @@ def load_nested_map():
 # -----------------------
 # Generic book fetcher
 # -----------------------
-def get_books(search_query="", current_filter="", current_lang="all", selected_sort_price="asc"):
+def get_books(search_query="", current_filter="", current_lang="all", selected_sort_price="asc", limit=20, offset=0):
     # Default selected_sort_price di-set ke "asc" di parameter fungsi ^^^
     
     sq = search_query.replace('"', '\\"')
@@ -114,8 +115,8 @@ def get_books(search_query="", current_filter="", current_lang="all", selected_s
 
     filters_block = "\n".join(filter_clauses) + ("\n" + search_clause if search_clause else "")
 
-    q = queries.get_books_query(filters_block, order_clause)
-    
+    q = queries.get_books_query(filters_block, order_clause, limit, offset)
+
     rows = run_query(q)
     return [map_book_row(r) for r in rows]
 
@@ -145,8 +146,8 @@ def index():
     # UBAH DISINI: Default 'asc' jika tidak ada di URL
     selected_sort_price = request.args.get("sort_price", "asc") 
 
-    books = get_books(search_query, current_filter, current_lang, selected_sort_price)
-    
+    books = get_books(search_query, current_filter, current_lang, selected_sort_price, limit=20, offset=0)
+
     # Menggunakan fungsi load yang sudah diperbarui
     all_categories = load_categories()
     all_languages = load_languages()
@@ -201,6 +202,25 @@ def search():
         total_count=len(get_books("", "", "all", "")),
         results_count=len(books)
     )
+
+# 3. BUAT ROUTE BARU: API UNTUK LAZY LOAD
+@app.route("/api/load-more")
+def load_more():
+    # Ambil parameter dari AJAX
+    search_query = request.args.get("query", "")
+    current_filter = request.args.get("filter", "")
+    current_lang = request.args.get("lang", "all")
+    selected_sort_price = request.args.get("sort_price", "asc")
+    
+    # Ambil offset (halaman ke berapa)
+    offset = request.args.get("offset", 0, type=int)
+    limit = 20 # Muat 20 per batch
+
+    # Ambil data
+    books = get_books(search_query, current_filter, current_lang, selected_sort_price, limit, offset)
+    
+    # Kembalikan sebagai JSON
+    return jsonify(books)
 
 @app.route("/book/<id>")
 def detail(id):

@@ -62,7 +62,7 @@ def get_book_detail_query(book_id):
     LIMIT 1
     """
 
-def get_books_query(filters_block, order_clause):
+def get_books_query(filters_block, order_clause, limit=20, offset=0):
     # Jika order_clause kosong (default), kita paksa urutkan by Harga ASC
     if not order_clause:
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
@@ -83,5 +83,6 @@ def get_books_query(filters_block, order_clause):
         {filters_block}
     }}
     {order_clause}
-    LIMIT 200
+    LIMIT {limit}
+    OFFSET {offset}
     """

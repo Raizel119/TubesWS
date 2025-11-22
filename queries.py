@@ -22,21 +22,24 @@ SELECT DISTINCT ?lang WHERE {
 ORDER BY ?lang
 """
 
+# UPDATE: Tambah ?sub3 di sini
 GET_NESTED_MAP = """
-SELECT DISTINCT ?cat ?sub1 ?sub2 WHERE {
+SELECT DISTINCT ?cat ?sub1 ?sub2 ?sub3 WHERE {
     ?b bu:KategoriUtama ?cat .
     OPTIONAL { ?b bu:Subkategori1 ?sub1 . }
     OPTIONAL { ?b bu:Subkategori2 ?sub2 . }
+    OPTIONAL { ?b bu:Subkategori3 ?sub3 . }
 }
-ORDER BY ?cat ?sub1 ?sub2
+ORDER BY ?cat ?sub1 ?sub2 ?sub3
 """
 
 # 3. Query Dinamis
 
+# UPDATE: Tambah ?Sub3 di select dan optional
 def get_book_detail_query(book_id):
     return f"""
     SELECT ?Judul ?Penulis ?Harga ?KategoriUtama
-           ?Sub1 ?Sub2 ?Penerbit ?TanggalTerbit ?ISBN ?Halaman ?Bahasa
+           ?Sub1 ?Sub2 ?Sub3 ?Penerbit ?TanggalTerbit ?ISBN ?Halaman ?Bahasa
            ?Panjang ?Lebar ?Berat ?Format ?Deskripsi ?Gambar
     WHERE {{
         ?b rdf:type bu:Buku .
@@ -47,6 +50,7 @@ def get_book_detail_query(book_id):
         OPTIONAL {{ ?b bu:KategoriUtama ?KategoriUtama . }}
         OPTIONAL {{ ?b bu:Subkategori1 ?Sub1 . }}
         OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
+        OPTIONAL {{ ?b bu:Subkategori3 ?Sub3 . }}
         OPTIONAL {{ ?b bu:Penerbit ?Penerbit . }}
         OPTIONAL {{ ?b bu:TanggalTerbit ?TanggalTerbit . }}
         OPTIONAL {{ ?b bu:ISBN ?ISBN . }}
@@ -62,13 +66,14 @@ def get_book_detail_query(book_id):
     LIMIT 1
     """
 
+# UPDATE: Tambah ?Sub3 di select dan optional
 def get_books_query(filters_block, order_clause, limit=20, offset=0):
     # Jika order_clause kosong (default), kita paksa urutkan by Harga ASC
     if not order_clause:
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
 
     return f"""
-    SELECT ?id ?Judul ?Penulis ?Harga ?KategoriUtama ?Sub1 ?Sub2 ?Gambar WHERE {{
+    SELECT ?id ?Judul ?Penulis ?Harga ?KategoriUtama ?Sub1 ?Sub2 ?Sub3 ?Gambar WHERE {{
         ?b rdf:type bu:Buku .
         ?b bu:Judul ?Judul .
         OPTIONAL {{ ?b bu:Penulis ?Penulis . }}
@@ -76,6 +81,7 @@ def get_books_query(filters_block, order_clause, limit=20, offset=0):
         OPTIONAL {{ ?b bu:KategoriUtama ?KategoriUtama . }}
         OPTIONAL {{ ?b bu:Subkategori1 ?Sub1 . }}
         OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
+        OPTIONAL {{ ?b bu:Subkategori3 ?Sub3 . }}
         OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
 
         BIND(STRAFTER(STR(?b), "#") AS ?id)
@@ -87,6 +93,7 @@ def get_books_query(filters_block, order_clause, limit=20, offset=0):
     OFFSET {offset}
     """
 
+# UPDATE: Tambah optional Sub3 di count juga agar filter akurat
 def get_total_count_query(filters_block):
     return f"""
     SELECT (COUNT(DISTINCT ?b) as ?count) WHERE {{
@@ -97,6 +104,7 @@ def get_total_count_query(filters_block):
         OPTIONAL {{ ?b bu:KategoriUtama ?KategoriUtama . }}
         OPTIONAL {{ ?b bu:Subkategori1 ?Sub1 . }}
         OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
+        OPTIONAL {{ ?b bu:Subkategori3 ?Sub3 . }}
         
         {filters_block}
     }}

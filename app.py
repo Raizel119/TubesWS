@@ -2,36 +2,27 @@ from flask import Flask, render_template, request, abort, jsonify
 from SPARQLWrapper import SPARQLWrapper, JSON
 from urllib.parse import quote
 
-# --- IMPORT FILE QUERIES ---
 import queries 
 
 app = Flask(__name__)
 
-# 1. Template Filter untuk URL (Menangani karakter '&')
 @app.template_filter('uquote')
 def uquote_filter(s):
-    """Mengubah karakter spesial (seperti &) menjadi aman untuk URL"""
     if s:
         return quote(s, safe='')
     return ""
 
 FUSEKI_URL = "http://localhost:3030/bookara/query"
 
-# -----------------------
-# Helper: run SPARQL query
-# -----------------------
 def run_query(query_string):
     sparql = SPARQLWrapper(FUSEKI_URL)
     sparql.setQuery(queries.PREFIX + "\n" + query_string)
     sparql.setReturnFormat(JSON)
     return sparql.query().convert()["results"]["bindings"]
 
-# -----------------------
-# Map raw SPARQL row -> dict
-# -----------------------
+# UPDATE: Tambahkan mapping untuk Sub3
 def map_book_row(row):
     gambar = row.get("Gambar", {}).get("value", "")
-    # Placeholder dihandle di Frontend, tapi kita set default string kosong jika null
     if not gambar:
         gambar = "" 
 
@@ -43,12 +34,10 @@ def map_book_row(row):
         "KategoriUtama": row.get("KategoriUtama", {}).get("value", ""),
         "Subkategori1": row.get("Sub1", {}).get("value", ""),
         "Subkategori2": row.get("Sub2", {}).get("value", ""),
+        "Subkategori3": row.get("Sub3", {}).get("value", ""), # <-- BARU
         "Gambar": gambar
     }
 
-# -----------------------
-# Load Lists (Kategori & Bahasa)
-# -----------------------
 def load_categories():
     rows = run_query(queries.GET_ALL_CATEGORIES)
     return [r["cat"]["value"] for r in rows]
@@ -57,6 +46,8 @@ def load_languages():
     rows = run_query(queries.GET_ALL_LANGUAGES)
     return [r["lang"]["value"] for r in rows]
 
+# UPDATE: Logika Nested Map 4 Level
+# Struktur: { 'Utama': { 'Sub1': { 'Sub2': ['Sub3a', 'Sub3b'] } } }
 def load_nested_map():
     rows = run_query(queries.GET_NESTED_MAP)
     nested = {}
@@ -64,40 +55,53 @@ def load_nested_map():
         cat = r["cat"]["value"]
         sub1 = r.get("sub1", {}).get("value")
         sub2 = r.get("sub2", {}).get("value")
+        sub3 = r.get("sub3", {}).get("value")
+
         if cat not in nested:
             nested[cat] = {}
+        
         if sub1:
-            nested[cat].setdefault(sub1, [])
-            if sub2 and sub2 not in nested[cat][sub1]:
-                nested[cat][sub1].append(sub2)
+            # Pastikan sub1 ada di dictionary parent
+            if sub1 not in nested[cat]:
+                nested[cat][sub1] = {}
+            
+            if sub2:
+                # Pastikan sub2 ada di dictionary sub1
+                # Di level sub2, nilainya sekarang adalah LIST dari sub3
+                if sub2 not in nested[cat][sub1]:
+                    nested[cat][sub1][sub2] = []
+                
+                if sub3:
+                    # Jika sub3 belum ada di list, tambahkan
+                    if sub3 not in nested[cat][sub1][sub2]:
+                        nested[cat][sub1][sub2].append(sub3)
+                        
     return nested
 
-# -------------------------------------------------
-# CORE LOGIC: Membangun String Filter SPARQL
-# (Dipisah agar bisa dipakai untuk Get Data & Get Count)
-# -------------------------------------------------
+# UPDATE: Filter Logic untuk Sub3
 def build_filter_string(search_query, current_filter, current_lang):
     sq = search_query.replace('"', '\\"')
 
     filter_clauses = []
     
-    # Filter Kategori
     if current_filter:
         if current_filter.startswith("cat_"):
             val = current_filter.replace("cat_", "")
             filter_clauses.append(f'?b bu:KategoriUtama "{val}" .')
         elif current_filter.startswith("sub_"):
             val = current_filter.replace("sub_", "")
-            filter_clauses.append(f'FILTER(?Sub1 = "{val}" || ?Sub2 = "{val}")')
+            # Filter ini mencari di Sub1, Sub2, ATAU Sub3 (lebih fleksibel)
+            filter_clauses.append(f'FILTER(?Sub1 = "{val}" || ?Sub2 = "{val}" || ?Sub3 = "{val}")')
         elif current_filter.startswith("subsub_"):
             val = current_filter.replace("subsub_", "")
             filter_clauses.append(f'?b bu:Subkategori2 "{val}" .')
+        elif current_filter.startswith("sub3_"): # <-- BARU
+            val = current_filter.replace("sub3_", "")
+            filter_clauses.append(f'?b bu:Subkategori3 "{val}" .')
 
-    # Filter Bahasa
     if current_lang != "all":
         filter_clauses.append(f'?b bu:Bahasa "{current_lang}" .')
 
-    # Filter Pencarian Teks
     search_clause = ""
     if sq:
         search_clause = f'''
@@ -107,38 +111,24 @@ def build_filter_string(search_query, current_filter, current_lang):
         )
         '''
     
-    # Gabungkan semua filter
     return "\n".join(filter_clauses) + ("\n" + search_clause if search_clause else "")
 
-# -----------------------
-# Fungsi 1: Ambil Data Buku (List)
-# -----------------------
 def get_books(search_query="", current_filter="", current_lang="all", selected_sort_price="asc", limit=20, offset=0):
-    # 1. Buat Filter
     filters_block = build_filter_string(search_query, current_filter, current_lang)
 
-    # 2. Atur Sorting
     order_clause = ""
     if selected_sort_price == "desc":
         order_clause = "ORDER BY DESC(xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', '')))"
     else:
-        # Default asc
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
 
-    # 3. Panggil Query dengan Limit & Offset
     q = queries.get_books_query(filters_block, order_clause, limit, offset)
     
     rows = run_query(q)
     return [map_book_row(r) for r in rows]
 
-# -----------------------
-# Fungsi 2: Ambil Total Count (Angka)
-# -----------------------
 def get_total_books_count(search_query="", current_filter="", current_lang="all"):
-    # 1. Buat Filter yang SAMA PERSIS
     filters_block = build_filter_string(search_query, current_filter, current_lang)
-    
-    # 2. Panggil Query Count (Pastikan fungsi ini ada di queries.py)
     q = queries.get_total_count_query(filters_block)
     rows = run_query(q)
     
@@ -171,23 +161,31 @@ def index():
     current_lang = request.args.get("lang", "all")
     selected_sort_price = request.args.get("sort_price", "asc")
 
-    # 1. Ambil Data Buku (Hanya 20 untuk Lazy Loading awal)
     books = get_books(search_query, current_filter, current_lang, selected_sort_price, limit=20, offset=0)
-    
-    # 2. Ambil Total Asli dari Database (Misal: 12000)
     total_count = get_total_books_count(search_query, current_filter, current_lang)
 
-    # 3. Load Data Sidebar
     all_categories = load_categories()
     all_languages = load_languages()
     nested_category_map = load_nested_map()
 
-    # 4. Data untuk Rak Buku (Horizontal Scroll)
-    # Batasi query ini agar home tidak berat (misal ambil 100 buku acak/terawal)
     all_books_for_shelves = get_books("", "", "all", "asc", limit=100, offset=0)
     grouped_books = group_books_by_category(all_books_for_shelves)
 
     active_filters = build_active_filters(current_filter, current_lang, search_query)
+
+    # Logika untuk menentukan dropdown mana yang terbuka di Sidebar (sampai level 3)
+    current_cat = None
+    current_sub1 = None
+    current_sub2 = None # Sub2 sekarang menjadi parent dari Sub3
+
+    if current_filter:
+        if current_filter.startswith("cat_"):
+            current_cat = current_filter.replace("cat_", "")
+        elif current_filter.startswith("sub_"):
+            current_sub1 = current_filter.replace("sub_", "")
+        elif current_filter.startswith("subsub_"):
+            current_sub2 = current_filter.replace("subsub_", "")
+        # Jika filter adalah sub3_, kita tidak perlu variabel khusus karena logic template akan mencarinya
 
     return render_template(
         "index.html",
@@ -196,17 +194,17 @@ def index():
         all_categories=all_categories,
         all_languages=all_languages,
         nested_category_map=nested_category_map,
-        
-        total_count=total_count, # <-- Ini jumlah asli (12000)
-        results_count=len(books), # <-- Ini jumlah yang sedang tampil (20)
-        
+        total_count=total_count,
+        results_count=len(books),
         current_filter=current_filter,
         current_lang=current_lang,
         search_query=search_query,
         selected_sort_price=selected_sort_price,
         active_filters=active_filters,
-        current_selected_cat=current_filter.replace("cat_", "") if current_filter.startswith("cat_") else None,
-        current_selected_sub=current_filter.replace("sub_", "") if current_filter.startswith("sub_") else None
+        # Pass variable helper untuk template
+        current_cat=current_cat,
+        current_sub1=current_sub1,
+        current_sub2=current_sub2
     )
 
 @app.route("/search")
@@ -216,7 +214,6 @@ def search():
     current_lang = request.args.get("lang", "all")
     selected_sort_price = request.args.get("sort_price", "asc")
 
-    # Sama seperti index, ambil 20 awal & hitung total
     books = get_books(search_query, current_filter, current_lang, selected_sort_price, limit=20, offset=0)
     total_count = get_total_books_count(search_query, current_filter, current_lang)
 
@@ -234,24 +231,20 @@ def search():
         nested_category_map=nested_category_map,
         all_categories=all_categories,
         all_languages=all_languages,
-        
-        total_count=total_count, # Gunakan hasil hitung DB
+        total_count=total_count,
         results_count=len(books)
     )
 
 @app.route("/api/load-more")
 def load_more():
-    # API Endpoint untuk Javascript Lazy Loading
     search_query = request.args.get("query", "")
     current_filter = request.args.get("filter", "")
     current_lang = request.args.get("lang", "all")
     selected_sort_price = request.args.get("sort_price", "asc")
-    
     offset = request.args.get("offset", 0, type=int)
     limit = 20 
 
     books = get_books(search_query, current_filter, current_lang, selected_sort_price, limit, offset)
-    
     return jsonify(books)
 
 @app.route("/book/<id>")
@@ -269,6 +262,7 @@ def detail(id):
         "KategoriUtama": r.get("KategoriUtama", {}).get("value", ""),
         "Subkategori1": r.get("Sub1", {}).get("value", ""),
         "Subkategori2": r.get("Sub2", {}).get("value", ""),
+        "Subkategori3": r.get("Sub3", {}).get("value", ""), # BARU
         "Penerbit": r.get("Penerbit", {}).get("value", ""),
         "TanggalTerbit": r.get("TanggalTerbit", {}).get("value", ""),
         "ISBN": r.get("ISBN", {}).get("value", ""),

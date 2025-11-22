@@ -72,6 +72,7 @@
 
                     <h2 class="filter-title">Filter</h2>
 
+                    <!-- 1. FILTER KATEGORI -->
                     <details class="filter-group" open>
                         <summary class="filter-group-title">Kategori</summary>
                         <div class="filter-options-list">
@@ -81,13 +82,26 @@
                                 <span>Semua Kategori</span>
                             </a>
 
+                            <!-- LEVEL 1: Kategori Utama -->
                             {% for category, sub_map in nested_category_map.items() %}
+                                
+                                <!-- Logic Open Parent -->
                                 <details class="filter-item-nested" 
                                     {% if current_filter == 'cat_' + category %}open
                                     {% elif current_filter and current_filter.startswith('sub_') and current_filter.replace('sub_', '') in sub_map %}open
-                                    {% elif current_filter and current_filter.startswith('subsub_') %}
-                                        {% set target = current_filter.replace('subsub_', '') %}
-                                        {% for sub_list in sub_map.values() %}{% if target in sub_list %}open{% endif %}{% endfor %}
+                                    {% elif current_filter and (current_filter.startswith('subsub_') or current_filter.startswith('sub3_')) %}
+                                        {# Cek recursive apakah anak/cucu ada di kategori ini #}
+                                        {% set is_child = False %}
+                                        {% for s1, s2_map in sub_map.items() %}
+                                            {% if current_filter == 'subsub_' + s1 or current_filter.replace('subsub_', '') in s2_map %}
+                                                {% set is_child = True %}
+                                            {% elif current_filter.startswith('sub3_') %}
+                                                {% for s3_list in s2_map.values() %}
+                                                    {% if current_filter.replace('sub3_', '') in s3_list %}{% set is_child = True %}{% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if is_child %}open{% endif %}
                                     {% endif %}>
                                 
                                     <summary>
@@ -98,10 +112,20 @@
                                     </summary>
 
                                     <div class="filter-options-nested">
-                                        {% for sub_category, sub_sub_list in sub_map.items() %}
+                                        <!-- LEVEL 2: Subkategori 1 -->
+                                        {% for sub_category, sub2_map in sub_map.items() %}
+                                            
                                             <details class="filter-item-nested"
                                                 {% if current_filter == 'sub_' + sub_category %}open
-                                                {% elif current_filter and current_filter.startswith('subsub_') and current_filter.replace('subsub_', '') in sub_sub_list %}open
+                                                {% elif current_filter and current_filter.startswith('subsub_') and current_filter.replace('subsub_', '') in sub2_map %}open
+                                                {% elif current_filter and current_filter.startswith('sub3_') %}
+                                                    {# Cek Sub3 #}
+                                                    {% set target3 = current_filter.replace('sub3_', '') %}
+                                                    {% set is_gchild = False %}
+                                                    {% for s3_list in sub2_map.values() %}
+                                                        {% if target3 in s3_list %}{% set is_gchild = True %}{% endif %}
+                                                    {% endfor %}
+                                                    {% if is_gchild %}open{% endif %}
                                                 {% endif %}>
                                                 
                                                 <summary>
@@ -112,11 +136,41 @@
                                                 </summary>
                                                 
                                                 <div class="filter-options-nested-sub">
-                                                    {% for sub_sub in sub_sub_list %}
-                                                    <a href="/?filter=subsub_{{ sub_sub | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
-                                                       class="filter-item-label {% if current_filter == 'subsub_' + sub_sub %}active{% endif %}">
-                                                        <span>{{ sub_sub }}</span>
-                                                    </a>
+                                                    <!-- LEVEL 3: Subkategori 2 -->
+                                                    {% for sub2, sub3_list in sub2_map.items() %}
+                                                        
+                                                        <!-- Jika punya Sub3, buat details lagi. Jika tidak, link biasa -->
+                                                        {% if sub3_list %}
+                                                            <details class="filter-item-nested" style="margin-left: 10px;"
+                                                                {% if current_filter == 'subsub_' + sub2 %}open
+                                                                {% elif current_filter.replace('sub3_', '') in sub3_list %}open
+                                                                {% endif %}>
+                                                                
+                                                                <summary>
+                                                                    <a href="/?filter=subsub_{{ sub2 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
+                                                                    class="filter-item-label {% if current_filter == 'subsub_' + sub2 %}active{% endif %}">
+                                                                        <span>{{ sub2 }}</span>
+                                                                    </a>
+                                                                </summary>
+
+                                                                <!-- LEVEL 4: Subkategori 3 -->
+                                                                <div class="filter-options-nested-sub" style="padding-left: 15px;">
+                                                                    {% for sub3 in sub3_list %}
+                                                                        <a href="/?filter=sub3_{{ sub3 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
+                                                                        class="filter-item-label {% if current_filter == 'sub3_' + sub3 %}active{% endif %}">
+                                                                            <span>{{ sub3 }}</span>
+                                                                        </a>
+                                                                    {% endfor %}
+                                                                </div>
+                                                            </details>
+                                                        {% else %}
+                                                            <!-- Tidak punya Sub3, render sebagai link biasa -->
+                                                            <a href="/?filter=subsub_{{ sub2 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
+                                                               class="filter-item-label {% if current_filter == 'subsub_' + sub2 %}active{% endif %}">
+                                                                <span>{{ sub2 }}</span>
+                                                            </a>
+                                                        {% endif %}
+
                                                     {% endfor %}
                                                 </div>
                                             </details>
@@ -127,16 +181,21 @@
                         </div>
                     </details>
                     
+                    <!-- 2. FILTER BAHASA -->
                     <details class="filter-group" open>
                         <summary class="filter-group-title">Bahasa</summary>
                         <div class="filter-options-list">
                             <label class="filter-item">
-                                <input type="radio" name="lang" value="all" {% if current_lang == 'all' %}checked{% endif %} onchange="this.form.submit()">
+                                <input type="radio" name="lang" value="all" 
+                                       {% if current_lang == 'all' %}checked{% endif %} 
+                                       onchange="this.form.submit()">
                                 <span>Semua Bahasa</span>
                             </label>
                             {% for lang in all_languages %}
                             <label class="filter-item">
-                                <input type="radio" name="lang" value="{{ lang }}" {% if current_lang == lang %}checked{% endif %} onchange="this.form.submit()">
+                                <input type="radio" name="lang" value="{{ lang }}" 
+                                       {% if current_lang == lang %}checked{% endif %} 
+                                       onchange="this.form.submit()">
                                 <span>{{ lang }}</span>
                             </label>
                             {% endfor %}

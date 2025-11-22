@@ -63,6 +63,10 @@ def get_book_detail_query(book_id):
     """
 
 def get_books_query(filters_block, order_clause):
+    # Jika order_clause kosong (default), kita paksa urutkan by Harga ASC
+    if not order_clause:
+        order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
+
     return f"""
     SELECT ?id ?Judul ?Penulis ?Harga ?KategoriUtama ?Sub1 ?Sub2 ?Gambar WHERE {{
         ?b rdf:type bu:Buku .

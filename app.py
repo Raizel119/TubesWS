@@ -67,7 +67,9 @@ def load_nested_map():
 # -----------------------
 # Generic book fetcher
 # -----------------------
-def get_books(search_query="", current_filter="", current_lang="all", selected_sort_price=""):
+def get_books(search_query="", current_filter="", current_lang="all", selected_sort_price="asc"):
+    # Default selected_sort_price di-set ke "asc" di parameter fungsi ^^^
+    
     sq = search_query.replace('"', '\\"')
 
     filter_clauses = []
@@ -94,16 +96,17 @@ def get_books(search_query="", current_filter="", current_lang="all", selected_s
         )
         '''
 
+    # --- LOGIKA SORTING HARGA YANG DIPERBAIKI ---
+    # Rumus: Hapus "Rp", Hapus Titik "[.]", lalu ubah ke Integer
     order_clause = ""
-    if selected_sort_price == "asc":
-        order_clause = "ORDER BY xsd:decimal(REPLACE(REPLACE(?Harga, 'Rp', ''), '.', ''))"
-    elif selected_sort_price == "desc":
-        order_clause = "ORDER BY DESC(xsd:decimal(REPLACE(REPLACE(?Harga, 'Rp', ''), '.', '')))"
+    if selected_sort_price == "desc":
+        order_clause = "ORDER BY DESC(xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', '')))"
+    else:
+        # Default (asc) atau jika kosong
+        order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
 
-    # Gabungkan logika filter di sini
     filters_block = "\n".join(filter_clauses) + ("\n" + search_clause if search_clause else "")
 
-    # Panggil query template dari file queries.py
     q = queries.get_books_query(filters_block, order_clause)
     
     rows = run_query(q)
@@ -132,7 +135,8 @@ def index():
     search_query = request.args.get("query", "")
     current_filter = request.args.get("filter", "")
     current_lang = request.args.get("lang", "all")
-    selected_sort_price = request.args.get("sort_price", "")
+    # UBAH DISINI: Default 'asc' jika tidak ada di URL
+    selected_sort_price = request.args.get("sort_price", "asc") 
 
     books = get_books(search_query, current_filter, current_lang, selected_sort_price)
     
@@ -169,7 +173,8 @@ def search():
     search_query = request.args.get("query", "")
     current_filter = request.args.get("filter", "")
     current_lang = request.args.get("lang", "all")
-    selected_sort_price = request.args.get("sort_price", "")
+    # UBAH DISINI: Default 'asc' jika tidak ada di URL
+    selected_sort_price = request.args.get("sort_price", "asc") 
 
     books = get_books(search_query, current_filter, current_lang, selected_sort_price)
     all_categories = load_categories()

@@ -165,17 +165,19 @@
             </aside>
 
             <section class="home-content">
-                
-                <div class="search-sort-container">
+
+                <div class="search-sort-container" style="display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 30px; width: 100%;">
                     
-                    <div class="search-bar-container">
-                        <form action="/" method="GET" class="search-bar" id="search-form">
+                    <div class="search-bar-container" style="flex-grow: 1; position: relative; max-width: 100%;">
+                        
+                        <form action="/" method="GET" class="search-bar" id="search-form" style="display: flex; align-items: center; background: #fff; border: 1px solid #e5e5e5; border-radius: 50px; padding: 12px 20px; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
                             <input type="hidden" name="filter" value="{{ current_filter or '' }}">
                             <input type="hidden" name="lang" value="{{ current_lang or 'all' }}">
                             <input type="hidden" name="sort_price" value="{{ selected_sort_price or '' }}">
                             
-                            <span class="material-symbols-outlined">search</span>
-                            <input type="text" name="query" id="search-input" placeholder="Cari Judul Buku atau Penulis" value="{{ search_query or '' }}" autocomplete="off">
+                            <span class="material-symbols-outlined" style="font-size: 22px; color: #888; flex-shrink: 0;">search</span>
+                            
+                            <input type="text" name="query" id="search-input" placeholder="Cari Judul Buku atau Penulis" value="{{ search_query or '' }}" autocomplete="off" style="flex-grow: 1; border: none; outline: none; font-size: 1em; margin-left: 10px; background: transparent;">
                         </form>
                         
                         <div class="search-history" id="search-history-dropdown">
@@ -188,22 +190,24 @@
                         </div>
                     </div>
                 
-               <div class="dropdown" id="urutkan">
-                        <a href="#" class="nav-link dropdown-toggle" >
-                            <span class="filter-label">Urutkan <span class="arrow"></span></span></a></span>
-                            <span>
+                    <div class="dropdown" id="urutkan" style="position: relative;">
+                        <a href="#" class="nav-link dropdown-toggle" style="display: flex; align-items: center; gap: 10px; border: 1px solid #E0E0E0; border-radius: 12px; padding: 10px 20px; background-color: #FFFFFF; min-width: 180px; justify-content: space-between; text-decoration: none;">
+                            <span class="filter-label" style="font-size: 0.9em; color: #6C757D;">Urutkan</span>
+                            <span style="font-weight: 600; color: #1E1E1E; font-size: 0.95em;">
                                 {% if selected_sort_price == 'asc' %}Harga Terendah
                                 {% elif selected_sort_price == 'desc' %}Harga Tertinggi
-                                {% else %}Terbaru
+                                {% else %}Harga Terendah
                                 {% endif %}
                             </span>
-                            <span class="arrow-down"></span> </a>
+                            <span class="arrow-down" style="border: solid #1E1E1E; border-width: 0 2px 2px 0; display: inline-block; padding: 3px; transform: rotate(45deg);"></span> 
+                        </a>
+
                         <div class="dropdown-content">
-                            <a href="/?sort_price=&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}">Terbaru</a>
                             <a href="/?sort_price=asc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}">Harga Terendah</a>
                             <a href="/?sort_price=desc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}">Harga Tertinggi</a>
                         </div>
                     </div>
+
                 </div>
 {% if current_filter or search_query or current_lang != 'all' or selected_sort_price %}
                     

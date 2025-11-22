@@ -86,3 +86,18 @@ def get_books_query(filters_block, order_clause, limit=20, offset=0):
     LIMIT {limit}
     OFFSET {offset}
     """
+
+def get_total_count_query(filters_block):
+    return f"""
+    SELECT (COUNT(DISTINCT ?b) as ?count) WHERE {{
+        ?b rdf:type bu:Buku .
+        ?b bu:Judul ?Judul .
+        OPTIONAL {{ ?b bu:Penulis ?Penulis . }}
+        OPTIONAL {{ ?b bu:Harga ?Harga . }}
+        OPTIONAL {{ ?b bu:KategoriUtama ?KategoriUtama . }}
+        OPTIONAL {{ ?b bu:Subkategori1 ?Sub1 . }}
+        OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
+        
+        {filters_block}
+    }}
+    """

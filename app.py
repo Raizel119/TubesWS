@@ -1,12 +1,13 @@
-from flask import Flask, render_template, request, abort
+from flask import Flask, render_template, request, abort, jsonify
 from SPARQLWrapper import SPARQLWrapper, JSON
 from urllib.parse import quote
-from flask import jsonify
 
-# --- IMPORT FILE QUERIES YANG BARU DIBUAT ---
+# --- IMPORT FILE QUERIES ---
 import queries 
 
 app = Flask(__name__)
+
+# 1. Template Filter untuk URL (Menangani karakter '&')
 @app.template_filter('uquote')
 def uquote_filter(s):
     """Mengubah karakter spesial (seperti &) menjadi aman untuk URL"""
@@ -21,7 +22,6 @@ FUSEKI_URL = "http://localhost:3030/bookara/query"
 # -----------------------
 def run_query(query_string):
     sparql = SPARQLWrapper(FUSEKI_URL)
-    # Gabungkan PREFIX dari file queries dengan query string
     sparql.setQuery(queries.PREFIX + "\n" + query_string)
     sparql.setReturnFormat(JSON)
     return sparql.query().convert()["results"]["bindings"]
@@ -31,8 +31,9 @@ def run_query(query_string):
 # -----------------------
 def map_book_row(row):
     gambar = row.get("Gambar", {}).get("value", "")
+    # Placeholder dihandle di Frontend, tapi kita set default string kosong jika null
     if not gambar:
-        gambar = "/static/img/cover.avif"
+        gambar = "" 
 
     return {
         "id": row.get("id", {}).get("value", "").split("#")[-1],
@@ -46,10 +47,9 @@ def map_book_row(row):
     }
 
 # -----------------------
-# Load lists
+# Load Lists (Kategori & Bahasa)
 # -----------------------
 def load_categories():
-    # Menggunakan variabel dari queries.py
     rows = run_query(queries.GET_ALL_CATEGORIES)
     return [r["cat"]["value"] for r in rows]
 
@@ -72,15 +72,16 @@ def load_nested_map():
                 nested[cat][sub1].append(sub2)
     return nested
 
-# -----------------------
-# Generic book fetcher
-# -----------------------
-def get_books(search_query="", current_filter="", current_lang="all", selected_sort_price="asc", limit=20, offset=0):
-    # Default selected_sort_price di-set ke "asc" di parameter fungsi ^^^
-    
+# -------------------------------------------------
+# CORE LOGIC: Membangun String Filter SPARQL
+# (Dipisah agar bisa dipakai untuk Get Data & Get Count)
+# -------------------------------------------------
+def build_filter_string(search_query, current_filter, current_lang):
     sq = search_query.replace('"', '\\"')
 
     filter_clauses = []
+    
+    # Filter Kategori
     if current_filter:
         if current_filter.startswith("cat_"):
             val = current_filter.replace("cat_", "")
@@ -92,9 +93,11 @@ def get_books(search_query="", current_filter="", current_lang="all", selected_s
             val = current_filter.replace("subsub_", "")
             filter_clauses.append(f'?b bu:Subkategori2 "{val}" .')
 
+    # Filter Bahasa
     if current_lang != "all":
         filter_clauses.append(f'?b bu:Bahasa "{current_lang}" .')
 
+    # Filter Pencarian Teks
     search_clause = ""
     if sq:
         search_clause = f'''
@@ -103,22 +106,45 @@ def get_books(search_query="", current_filter="", current_lang="all", selected_s
             CONTAINS(LCASE(?Penulis), LCASE("{sq}"))
         )
         '''
+    
+    # Gabungkan semua filter
+    return "\n".join(filter_clauses) + ("\n" + search_clause if search_clause else "")
 
-    # --- LOGIKA SORTING HARGA YANG DIPERBAIKI ---
-    # Rumus: Hapus "Rp", Hapus Titik "[.]", lalu ubah ke Integer
+# -----------------------
+# Fungsi 1: Ambil Data Buku (List)
+# -----------------------
+def get_books(search_query="", current_filter="", current_lang="all", selected_sort_price="asc", limit=20, offset=0):
+    # 1. Buat Filter
+    filters_block = build_filter_string(search_query, current_filter, current_lang)
+
+    # 2. Atur Sorting
     order_clause = ""
     if selected_sort_price == "desc":
         order_clause = "ORDER BY DESC(xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', '')))"
     else:
-        # Default (asc) atau jika kosong
+        # Default asc
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
 
-    filters_block = "\n".join(filter_clauses) + ("\n" + search_clause if search_clause else "")
-
+    # 3. Panggil Query dengan Limit & Offset
     q = queries.get_books_query(filters_block, order_clause, limit, offset)
-
+    
     rows = run_query(q)
     return [map_book_row(r) for r in rows]
+
+# -----------------------
+# Fungsi 2: Ambil Total Count (Angka)
+# -----------------------
+def get_total_books_count(search_query="", current_filter="", current_lang="all"):
+    # 1. Buat Filter yang SAMA PERSIS
+    filters_block = build_filter_string(search_query, current_filter, current_lang)
+    
+    # 2. Panggil Query Count (Pastikan fungsi ini ada di queries.py)
+    q = queries.get_total_count_query(filters_block)
+    rows = run_query(q)
+    
+    if rows:
+        return int(rows[0]["count"]["value"])
+    return 0
 
 def group_books_by_category(all_books):
     grouped = {}
@@ -143,17 +169,22 @@ def index():
     search_query = request.args.get("query", "")
     current_filter = request.args.get("filter", "")
     current_lang = request.args.get("lang", "all")
-    # UBAH DISINI: Default 'asc' jika tidak ada di URL
-    selected_sort_price = request.args.get("sort_price", "asc") 
+    selected_sort_price = request.args.get("sort_price", "asc")
 
+    # 1. Ambil Data Buku (Hanya 20 untuk Lazy Loading awal)
     books = get_books(search_query, current_filter, current_lang, selected_sort_price, limit=20, offset=0)
+    
+    # 2. Ambil Total Asli dari Database (Misal: 12000)
+    total_count = get_total_books_count(search_query, current_filter, current_lang)
 
-    # Menggunakan fungsi load yang sudah diperbarui
+    # 3. Load Data Sidebar
     all_categories = load_categories()
     all_languages = load_languages()
     nested_category_map = load_nested_map()
 
-    all_books_for_shelves = get_books("", "", "all", "")
+    # 4. Data untuk Rak Buku (Horizontal Scroll)
+    # Batasi query ini agar home tidak berat (misal ambil 100 buku acak/terawal)
+    all_books_for_shelves = get_books("", "", "all", "asc", limit=100, offset=0)
     grouped_books = group_books_by_category(all_books_for_shelves)
 
     active_filters = build_active_filters(current_filter, current_lang, search_query)
@@ -165,8 +196,10 @@ def index():
         all_categories=all_categories,
         all_languages=all_languages,
         nested_category_map=nested_category_map,
-        total_count=len(all_books_for_shelves),
-        results_count=len(books),
+        
+        total_count=total_count, # <-- Ini jumlah asli (12000)
+        results_count=len(books), # <-- Ini jumlah yang sedang tampil (20)
+        
         current_filter=current_filter,
         current_lang=current_lang,
         search_query=search_query,
@@ -181,10 +214,12 @@ def search():
     search_query = request.args.get("query", "")
     current_filter = request.args.get("filter", "")
     current_lang = request.args.get("lang", "all")
-    # UBAH DISINI: Default 'asc' jika tidak ada di URL
-    selected_sort_price = request.args.get("sort_price", "asc") 
+    selected_sort_price = request.args.get("sort_price", "asc")
 
-    books = get_books(search_query, current_filter, current_lang, selected_sort_price)
+    # Sama seperti index, ambil 20 awal & hitung total
+    books = get_books(search_query, current_filter, current_lang, selected_sort_price, limit=20, offset=0)
+    total_count = get_total_books_count(search_query, current_filter, current_lang)
+
     all_categories = load_categories()
     all_languages = load_languages()
     nested_category_map = load_nested_map()
@@ -199,34 +234,29 @@ def search():
         nested_category_map=nested_category_map,
         all_categories=all_categories,
         all_languages=all_languages,
-        total_count=len(get_books("", "", "all", "")),
+        
+        total_count=total_count, # Gunakan hasil hitung DB
         results_count=len(books)
     )
 
-# 3. BUAT ROUTE BARU: API UNTUK LAZY LOAD
 @app.route("/api/load-more")
 def load_more():
-    # Ambil parameter dari AJAX
+    # API Endpoint untuk Javascript Lazy Loading
     search_query = request.args.get("query", "")
     current_filter = request.args.get("filter", "")
     current_lang = request.args.get("lang", "all")
     selected_sort_price = request.args.get("sort_price", "asc")
     
-    # Ambil offset (halaman ke berapa)
     offset = request.args.get("offset", 0, type=int)
-    limit = 20 # Muat 20 per batch
+    limit = 20 
 
-    # Ambil data
     books = get_books(search_query, current_filter, current_lang, selected_sort_price, limit, offset)
     
-    # Kembalikan sebagai JSON
     return jsonify(books)
 
 @app.route("/book/<id>")
 def detail(id):
-    # Panggil fungsi pembentuk query dari file terpisah
     q = queries.get_book_detail_query(id)
-    
     rows = run_query(q)
     if not rows:
         abort(404)

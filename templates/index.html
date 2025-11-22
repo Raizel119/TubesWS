@@ -201,6 +201,39 @@
                             {% endfor %}
                         </div>
                     </details>
+
+                    <details class="filter-group" open>
+                        <summary class="filter-group-title">Halaman</summary>
+                        <div class="filter-options-list">
+                            <label class="filter-item">
+                                <input type="radio" name="page_range" value="all" 
+                                       {% if page_range == 'all' %}checked{% endif %} 
+                                       onchange="this.form.submit()">
+                                <span>Semua</span>
+                            </label>
+                            
+                            <label class="filter-item">
+                                <input type="radio" name="page_range" value="0-100" 
+                                       {% if page_range == '0-100' %}checked{% endif %} 
+                                       onchange="this.form.submit()">
+                                <span>0 - 100</span>
+                            </label>
+
+                            <label class="filter-item">
+                                <input type="radio" name="page_range" value="100-200" 
+                                       {% if page_range == '100-200' %}checked{% endif %} 
+                                       onchange="this.form.submit()">
+                                <span>100 - 200</span>
+                            </label>
+
+                            <label class="filter-item">
+                                <input type="radio" name="page_range" value="200+" 
+                                       {% if page_range == '200+' %}checked{% endif %} 
+                                       onchange="this.form.submit()">
+                                <span>> 200</span>
+                            </label>
+                        </div>
+                    </details>
                 </form>
             </aside>
 

@@ -22,7 +22,6 @@ SELECT DISTINCT ?lang WHERE {
 ORDER BY ?lang
 """
 
-# UPDATE: Tambah ?sub3 di sini
 GET_NESTED_MAP = """
 SELECT DISTINCT ?cat ?sub1 ?sub2 ?sub3 WHERE {
     ?b bu:KategoriUtama ?cat .
@@ -33,9 +32,26 @@ SELECT DISTINCT ?cat ?sub1 ?sub2 ?sub3 WHERE {
 ORDER BY ?cat ?sub1 ?sub2 ?sub3
 """
 
-# 3. Query Dinamis
+# 3. LOGIC FILTER HALAMAN (BARU - Dipindah ke sini)
+def get_page_filter_clause(page_range):
+    """
+    Mengembalikan string FILTER SPARQL berdasarkan rentang halaman.
+    """
+    if not page_range or page_range == "all":
+        return ""
+    
+    # Pastikan cast ke integer: xsd:integer(?Halaman)
+    if page_range == "0-100":
+        return "FILTER(xsd:integer(?Halaman) <= 100)"
+    elif page_range == "100-200":
+        return "FILTER(xsd:integer(?Halaman) > 100 && xsd:integer(?Halaman) <= 200)"
+    elif page_range == "200+":
+        return "FILTER(xsd:integer(?Halaman) > 200)"
+    
+    return ""
 
-# UPDATE: Tambah ?Sub3 di select dan optional
+# 4. Query Dinamis
+
 def get_book_detail_query(book_id):
     return f"""
     SELECT ?Judul ?Penulis ?Harga ?KategoriUtama
@@ -66,9 +82,7 @@ def get_book_detail_query(book_id):
     LIMIT 1
     """
 
-# UPDATE: Tambah ?Sub3 di select dan optional
 def get_books_query(filters_block, order_clause, limit=20, offset=0):
-    # Jika order_clause kosong (default), kita paksa urutkan by Harga ASC
     if not order_clause:
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
 
@@ -83,6 +97,8 @@ def get_books_query(filters_block, order_clause, limit=20, offset=0):
         OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
         OPTIONAL {{ ?b bu:Subkategori3 ?Sub3 . }}
         OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
+        # Kita butuh ?Halaman untuk filter, meskipun tidak ditampilkan di tabel utama
+        OPTIONAL {{ ?b bu:Halaman ?Halaman . }}
 
         BIND(STRAFTER(STR(?b), "#") AS ?id)
 
@@ -93,7 +109,6 @@ def get_books_query(filters_block, order_clause, limit=20, offset=0):
     OFFSET {offset}
     """
 
-# UPDATE: Tambah optional Sub3 di count juga agar filter akurat
 def get_total_count_query(filters_block):
     return f"""
     SELECT (COUNT(DISTINCT ?b) as ?count) WHERE {{
@@ -105,6 +120,7 @@ def get_total_count_query(filters_block):
         OPTIONAL {{ ?b bu:Subkategori1 ?Sub1 . }}
         OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
         OPTIONAL {{ ?b bu:Subkategori3 ?Sub3 . }}
+        OPTIONAL {{ ?b bu:Halaman ?Halaman . }}
         
         {filters_block}
     }}

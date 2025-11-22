@@ -1,10 +1,17 @@
 from flask import Flask, render_template, request, abort
 from SPARQLWrapper import SPARQLWrapper, JSON
+from urllib.parse import quote
 
 # --- IMPORT FILE QUERIES YANG BARU DIBUAT ---
 import queries 
 
 app = Flask(__name__)
+@app.template_filter('uquote')
+def uquote_filter(s):
+    """Mengubah karakter spesial (seperti &) menjadi aman untuk URL"""
+    if s:
+        return quote(s, safe='')
+    return ""
 
 FUSEKI_URL = "http://localhost:3030/bookara/query"
 

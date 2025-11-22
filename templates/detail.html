@@ -82,8 +82,15 @@
     <!--      BOOK DETAILS        -->
     <!-- ======================== -->
     <div class="book-detail-card">
-        <div class="book-detail-image">
-            <img src="{{ book.Gambar }}" alt="Cover {{ book.Judul }}" />
+        <div class="card-image">
+            {% if book.Gambar and book.Gambar != 'Tidak ditemukan' and book.Gambar|length > 5 %}
+                <img src="{{ book.Gambar }}" 
+                    alt="{{ book.Judul }}"
+                    onerror=`this.onerror=null; this.src="{{ url_for("static", filename="img/placeholder.jpg") }}";`>
+            {% else %}
+                <img src="{{ url_for('static', filename='img/placeholder.jpg') }}" 
+                    alt="Gambar Tidak Tersedia">
+            {% endif %}
         </div>
 
         <div class="book-detail-info">

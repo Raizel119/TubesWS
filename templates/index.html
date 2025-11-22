@@ -70,7 +70,7 @@
 
         <div class="container page-layout">
             
-<aside class="filter-sidebar">
+            <aside class="filter-sidebar">
                 <form action="/" method="GET" class="filter-form-v3">
                     <input type="hidden" name="query" value="{{ search_query or '' }}">
                     <input type="hidden" name="sort_price" value="{{ selected_sort_price or '' }}">
@@ -94,7 +94,6 @@
                                     {% elif current_filter and current_filter.startswith('sub_') and current_filter.replace('sub_', '') in sub_map %}
                                         open
                                     {% elif current_filter and current_filter.startswith('subsub_') %}
-                                        {# Cek manual apakah subsub yang aktif ada di dalam salah satu anak kategori ini #}
                                         {% set target = current_filter.replace('subsub_', '') %}
                                         {% for sub_list in sub_map.values() %}
                                             {% if target in sub_list %}open{% endif %}
@@ -102,16 +101,15 @@
                                     {% endif %}>
                                 
                                     <summary>
-                                        <a href="/?filter=cat_{{ category }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
+                                        <a href="/?filter=cat_{{ category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
                                            class="filter-item-label {% if current_filter == 'cat_' + category %}active{% endif %}">
                                             <span>{{ category }}</span>
                                         </a>
                                     </summary>
 
                                     <div class="filter-options-nested">
-                                        
                                         {% for sub_category, sub_sub_list in sub_map.items() %}
-                                        
+                                            
                                             <details class="filter-item-nested"
                                                 {% if current_filter == 'sub_' + sub_category %}
                                                     open
@@ -120,7 +118,7 @@
                                                 {% endif %}>
                                                 
                                                 <summary>
-                                                    <a href="/?filter=sub_{{ sub_category }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
+                                                    <a href="/?filter=sub_{{ sub_category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
                                                        class="filter-item-label {% if current_filter == 'sub_' + sub_category %}active{% endif %}">
                                                         <span>{{ sub_category }}</span>
                                                     </a>
@@ -128,7 +126,7 @@
                                                 
                                                 <div class="filter-options-nested-sub">
                                                     {% for sub_sub in sub_sub_list %}
-                                                    <a href="/?filter=subsub_{{ sub_sub }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
+                                                    <a href="/?filter=subsub_{{ sub_sub | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&sort_price={{ selected_sort_price or '' }}"
                                                        class="filter-item-label {% if current_filter == 'subsub_' + sub_sub %}active{% endif %}">
                                                         <span>{{ sub_sub }}</span>
                                                     </a>
@@ -236,7 +234,14 @@
                             <div class="book-card-small">
                                 <a href="/book/{{ book.id }}" class="card-link">
                                     <div class="card-image">
-                                        <img src="{{ book.Gambar }}" alt="{{ book['Judul'] }}">
+                                        {% if book.Gambar and book.Gambar != 'Tidak ditemukan' and book.Gambar|length > 5 %}
+                                            <img src="{{ book.Gambar }}" 
+                                                alt="{{ book.Judul }}"
+                                                onerror=`this.onerror=null; this.src="{{ url_for("static", filename="img/placeholder.jpg") }}";`>
+                                        {% else %}
+                                            <img src="{{ url_for('static', filename='img/placeholder.jpg') }}" 
+                                                alt="Gambar Tidak Tersedia">
+                                        {% endif %}
                                     </div>
                                     <div class="card-content">
                                         <p class="author">{{ book['Penulis'] }}</p>
@@ -267,7 +272,14 @@
                             <div class="book-card-small">
                                 <a href="/book/{{ book.id }}" class="card-link">
                                     <div class="card-image">
-                                        <img src="{{ book.Gambar }}" alt="{{ book['Judul'] }}">
+                                        {% if book.Gambar and book.Gambar != 'Tidak ditemukan' and book.Gambar|length > 5 %}
+                                            <img src="{{ book.Gambar }}" 
+                                                alt="{{ book.Judul }}"
+                                                onerror=`this.onerror=null; this.src="{{ url_for("static", filename="img/placeholder.jpg") }}";`>
+                                        {% else %}
+                                            <img src="{{ url_for('static', filename='img/placeholder.jpg') }}" 
+                                                alt="Gambar Tidak Tersedia">
+                                        {% endif %}
                                     </div>
                                     <div class="card-content">
                                         <p class="author">{{ book['Penulis'] }}</p>

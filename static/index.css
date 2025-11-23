@@ -243,6 +243,7 @@ a {
     overflow-y: auto; /* Sidebar bisa di-scroll */
     
     padding: 0; /* Hapus padding lama */
+    margin-right: 5px;
 }
 
 /* Hapus style .sidebar-nav lama */
@@ -376,7 +377,146 @@ a {
     /* border-radius: 12px; /* Sudut membulat */
     /* padding: 8px 18px;
 } */ */ */
+/* --- FILTER SIDEBAR TREE VIEW STYLE --- */
 
+.filter-sidebar {
+    width: 260px; /* Lebar sidebar */
+    flex-shrink: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+.filter-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #000;
+}
+
+.filter-subtitle {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    margin-top: 10px;
+    color: #000;
+}
+
+/* --- CSS STRUKTUR POHON (TREE VIEW) YANG RAPI --- */
+
+/* Reset dasar untuk details/summary */
+details > summary {
+    list-style: none;
+    outline: none;
+}
+details > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* 1. ROW STYLE: Ini kunci agar semua sejajar */
+.tree-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px; /* Padding seragam */
+    cursor: pointer;
+    text-decoration: none;
+    color: #333;
+    transition: background 0.2s;
+    border-radius: 6px;
+}
+
+/* Hover effect */
+.tree-row:hover {
+    background-color: #f5f5f5;
+    color: #6C63FF;
+}
+
+/* 2. LEVELING & INDENTASI (Membuat tangga ke kanan) */
+
+/* Container anak */
+.tree-children {
+    display: flex;
+    flex-direction: column;
+    /* Garis panduan vertikal di kiri */
+    border-left: 2px solid #f0f0f0; 
+    margin-left: 12px; /* Jarak garis dari kiri */
+    padding-left: 10px; /* Jarak konten dari garis */
+}
+
+/* Level 1 (Top Kategori) */
+.level-1 .tree-label, .level-1-single {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* Level 2 (Sub Kategori) */
+.level-2 .tree-label, .tree-link.level-2 {
+    font-size: 14px;
+    font-weight: 400;
+}
+
+/* Level 3 (Sub-Sub Kategori) */
+.tree-link.level-3 {
+    font-size: 13.5px;
+    color: #666;
+    padding-left: 10px;
+}
+
+/* 3. ICON & LABEL */
+.tree-arrow {
+    font-size: 11px;
+    color: #999;
+    transition: transform 0.2s ease;
+}
+
+/* Putar panah saat dibuka */
+details[open] > summary .tree-arrow {
+    transform: rotate(180deg);
+    color: #6C63FF;
+}
+
+/* Link View All (Lihat Semua) */
+.view-all {
+    font-size: 12px;
+    font-style: italic;
+    color: #aaa;
+    margin-bottom: 5px;
+    padding-left: 10px;
+    display: block;
+    text-decoration: none;
+}
+.view-all:hover { color: #6C63FF; }
+
+/* Jarak antar elemen */
+.mt-4 {
+    margin-top: 30px;
+}
+
+/* Radio Button Style */
+.radio-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #444;
+}
+/* Warna untuk kategori yang sedang dipilih */
+.active-cat {
+    color: #6C63FF !important;
+    font-weight: 700 !important;
+    background-color: rgba(108, 99, 255, 0.05);
+}
+
+/* Jarak antar filter section */
+.filter-section {
+    margin-top: 25px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+.radio-item input {
+    accent-color: #6C63FF;
+}
 #urutkan:hover .dropdown-content {
     display: block;
 }
@@ -999,41 +1139,127 @@ a {
     }
 }
 
-/* ======== BARU: Kontainer Filter Aktif ======== */
+/* --- ACTIVE FILTERS CONTAINER --- */
 .active-filters-container {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    padding-left: 20px;
-    padding-right: 20px;
+    align-items: center;
     margin-bottom: 20px;
 }
+
+/* 1. Tombol Hapus Semua (Bulat) */
+.clear-all-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+    padding: 0;
+}
+
+.clear-all-btn:hover {
+    background: #ffebee; /* Merah muda tipis */
+    color: #d32f2f;
+    border-color: #d32f2f;
+}
+
+/* 2. Filter Pill Biasa */
 .filter-pill {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     gap: 8px;
-    background-color: var(--light-bg); /* Latar abu-abu muda */
-    border: 1px solid var(--border-color);
-    border-radius: 20px; /* Bulat */
-    padding: 5px 12px;
-    font-size: 0.9em;
-    font-weight: 500;
-    color: var(--dark-text);
-    text-decoration: none;
+    background: #fff;
+    border: 1px solid #ddd; /* Border abu-abu halus */
+    border-radius: 20px; /* Rounded pill */
+    padding: 6px 14px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
 }
-.filter-pill .icon-tag {
-    font-size: 0.8em;
-    color: var(--light-text);
+
+/* Icon Tag di Kiri */
+.icon-tag {
+    color: #666;
+    font-size: 12px;
 }
-.filter-pill.clear-all {
-    font-weight: 700;
-    color: var(--dark-text);
-    font-size: 1.1em;
-    padding: 3px 10px;
+
+/* Tombol X Kecil di dalam Pill (Kanan) */
+.remove-single {
+    margin-left: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    color: #999;
+    font-size: 10px;
+    transition: 0.2s;
 }
-.filter-pill.clear-all:hover {
-    background-color: #e9ecef;
+
+/* Efek Hover pada Pill */
+.filter-pill:hover {
+    border-color: #6C63FF; /* Warna Ungu */
+    color: #6C63FF;
+    background-color: #f9f9ff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
+
+.filter-pill:hover .icon-tag {
+    color: #6C63FF;
+}
+
+.filter-pill:hover .remove-single {
+    background-color: rgba(108, 99, 255, 0.1);
+    color: #6C63FF;
+}
+/* --- LOADER SIMPEL (HANYA ICON) --- */
+#global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Latar belakang putih sangat transparan, hampir tidak terlihat */
+    background-color: rgba(255, 255, 255, 0.3); 
+    z-index: 99999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    /* backdrop-filter dihapus agar lebih bersih */
+}
+
+.spinner-content {
+    /* Hapus kotak putih dan bayangan */
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    text-align: center;
+}
+
+.spinner-icon {
+    font-size: 60px; /* Ukuran ikon diperbesar sedikit */
+    color: #6C63FF; /* Warna ungu tema (Ganti ke #888888 jika ingin abu-abu seperti gambar) */
+    margin-bottom: 0; /* Hapus jarak bawah */
+    animation: spin 0.8s linear infinite; /* Putaran sedikit lebih cepat */
+}
+
+/* Sembunyikan teks "Sedang Memuat..." */
+.loading-text {
+    display: none;
+}
+
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 .sidebar-category ul {
     list-style: none;

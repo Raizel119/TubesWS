@@ -57,6 +57,12 @@
 <body>
     
     {% set placeholder_img = url_for('static', filename='img/placeholder.jpg') %}
+    <div id="global-loader">
+        <div class="spinner-content">
+            <i class="fas fa-circle-notch spinner-icon"></i>
+            <div class="loading-text">Sedang Memuat...</div>
+        </div>
+    </div>
 
     <header class="navbar">
         <div class="container">
@@ -88,8 +94,8 @@
 
             <nav class="navbar-right">
                 <a href="/" class="nav-link active">Home</a>
-                <a href="#" class="nav-link">About Us</a>
-                <a href="#" class="nav-link">Contact</a>
+                <a href="/about" class="nav-link">About Us</a>
+                <a href="#contact" class="nav-link">Contact</a>
             </nav>
         </div>
     </header>
@@ -263,8 +269,8 @@
                             <span class="arrow-down" style="border: solid #1E1E1E; border-width: 0 2px 2px 0; display: inline-block; padding: 3px; transform: rotate(45deg);"></span> 
                         </a>
                         <div class="dropdown-content">
-                            <a href="/?sort_price=asc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}">Harga Terendah</a>
-                            <a href="/?sort_price=desc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}">Harga Tertinggi</a>
+                            <a href="/?sort_price=asc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}" onclick="showLoader()">Harga Terendah</a>
+                            <a href="/?sort_price=desc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}" onclick="showLoader()">Harga Tertinggi</a>
                         </div>
                     </div>
                 </div>
@@ -378,7 +384,9 @@
         </section>
     </main>
 
-    <footer class="footer">
+ <footer class="footer" id="contact">
+    <div class="footer-top">
+        <div class="footer-logo">
         <div class="footer-top">
             <div class="footer-logo">
                 <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Bookara">
@@ -408,11 +416,78 @@
                 </div>
             </div>
         </div>
-        <div class="footer-bottom">
-            © 2025 Bookara. All rights reserved.
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Bookara" />
         </div>
-    </footer>
+        <div class="footer-tagline">
+            Search Smarter. Read Better.
+        </div>
+    </div>
 
+    <div class="footer-container">
+        <div class="footer-column">
+            <h3>Company</h3>
+            <a href="#">Home</a>
+            <a href="#">About Us</a>
+            <a href="#">Kategori</a>
+            <a href="#">Contact</a>
+        </div>
+
+        <div class="footer-column">
+            <h3>Support</h3>
+            <a href="#">Help Center</a>
+            <a href="#">How It Works</a>
+            <a href="#">Report an Issue</a>
+        </div>
+
+        <div class="footer-column">
+            <h3>Legal</h3>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Cookie Policy</a>
+            <a href="#">Content Guidelines</a>
+        </div>
+
+        <div class="footer-column">
+            <h3>Contact Information</h3>
+            <a href="#">Email Support</a>
+            <a href="#">Business Inquiries</a>
+
+            <p style="margin-top:10px; font-weight:600">Social Media Links:</p>
+            <div class="social-icons">
+                <i class="fab fa-instagram"></i>
+                <i class="fab fa-x-twitter"></i>
+                <i class="fab fa-facebook"></i>
+                <i class="fab fa-linkedin"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        © 2025 Bookara. All rights reserved.
+    </div>
+ </footer>
+<script>
+    // --- LOGIKA KEEP OPEN SIDEBAR ---
+const activeLink = document.querySelector('.active-cat');
+if (activeLink) {
+    // 1. Ubah warna link yang aktif agar terlihat
+    activeLink.style.color = '#6C63FF';
+    activeLink.style.fontWeight = '700';
+
+    // 2. Loop ke atas (parents) untuk membuka semua tag <details>
+    let parent = activeLink.parentElement;
+    while (parent) {
+        if (parent.tagName === 'DETAILS') {
+            parent.setAttribute('open', 'true');
+        }
+        // Stop jika sudah sampai di container sidebar
+        if (parent.classList.contains('filter-category-tree')) {
+            break;
+        }
+        parent = parent.parentElement;
+    }
+}
+</script>
 
     <script>
         // 1. Sidebar Accordion Toggle
@@ -559,6 +634,86 @@
             }
         });
     </script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- LOGIKA TOMBOL HAPUS (X) ---
+    const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
 
+    // Fungsi untuk menampilkan/sembunyikan tombol
+    function toggleClearButton() {
+        if (searchInput.value.trim().length > 0) {
+            clearBtn.style.display = 'block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+    }
+
+    if (searchInput && clearBtn) {
+        // 1. Cek saat halaman baru dimuat (penting jika ada search query dari server)
+        toggleClearButton();
+
+        // 2. Cek setiap kali user mengetik
+        searchInput.addEventListener('input', toggleClearButton);
+
+        // 3. Aksi saat tombol X diklik
+        clearBtn.addEventListener('click', function(e) {
+            e.preventDefault(); // Mencegah form submit tidak sengaja
+            searchInput.value = ''; // Kosongkan input
+            toggleClearButton();    // Sembunyikan tombol
+            searchInput.focus();    // Kembalikan kursor ke input
+            
+            // Opsi: Jika ingin langsung reload halaman bersih (tanpa search), uncomment baris bawah:
+            // window.location.href = window.location.pathname; 
+        });
+    }
+
+});
+</script>
+<script>
+    // Fungsi ini HARUS berada di luar document.addEventListener
+    // agar bisa dipanggil langsung oleh onclick="" dan onchange="" di HTML
+    function showLoader() {
+        const loader = document.getElementById('global-loader');
+        if (loader) {
+            loader.style.display = 'flex'; // Paksa tampil
+        }
+    }
+
+    // Sembunyikan loader saat user menekan tombol Back di browser
+    window.addEventListener("pageshow", function(event) {
+        const loader = document.getElementById('global-loader');
+        if (event.persisted && loader) {
+            loader.style.display = "none";
+        }
+    });
+</script>
+<script>
+    // --- FUNGSI UNTUK MENGHAPUS PARAMETER URL (HAPUS FILTER SATUAN) ---
+    function removeParam(key) {
+        // 1. Ambil URL saat ini
+        const url = new URL(window.location.href);
+        
+        // 2. Hapus parameter spesifik (misal: 'lang', 'filter', atau 'page_range')
+        url.searchParams.delete(key);
+        
+        // 3. Reset pagination ke halaman 1 jika filter berubah (opsional, good practice)
+        if (url.searchParams.has('offset')) {
+            url.searchParams.delete('offset');
+        }
+
+        // 4. Tampilkan loader dan reload halaman dengan URL baru
+        if (typeof showLoader === 'function') showLoader();
+        window.location.href = url.toString();
+    }
+
+    // --- FUNGSI HAPUS SEMUA FILTER (RESET KE HOME) ---
+    function clearAllFilters() {
+        if (typeof showLoader === 'function') showLoader();
+        // Redirect ke root (/) atau hapus semua query params
+        window.location.href = '/';
+    }
+</script>
 </body>
 </html>

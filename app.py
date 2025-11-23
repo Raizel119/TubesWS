@@ -123,6 +123,8 @@ def get_books(search_query="", current_filter="", current_lang="all", page_range
     filters_block = build_filter_string(search_query, current_filter, current_lang, page_range)
     
     order_clause = ""
+    sort_direction = selected_sort_price if selected_sort_price else "asc"
+
     if selected_sort_price == "desc":
         order_clause = "ORDER BY DESC(xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', '')))"
     else:

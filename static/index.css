@@ -243,6 +243,7 @@ a {
     overflow-y: auto; /* Sidebar bisa di-scroll */
     
     padding: 0; /* Hapus padding lama */
+    margin-right: 5px;
 }
 
 /* Hapus style .sidebar-nav lama */
@@ -376,7 +377,146 @@ a {
     /* border-radius: 12px; /* Sudut membulat */
     /* padding: 8px 18px;
 } */ */ */
+/* --- FILTER SIDEBAR TREE VIEW STYLE --- */
 
+.filter-sidebar {
+    width: 260px; /* Lebar sidebar */
+    flex-shrink: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+.filter-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: #000;
+}
+
+.filter-subtitle {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    margin-top: 10px;
+    color: #000;
+}
+
+/* --- CSS STRUKTUR POHON (TREE VIEW) YANG RAPI --- */
+
+/* Reset dasar untuk details/summary */
+details > summary {
+    list-style: none;
+    outline: none;
+}
+details > summary::-webkit-details-marker {
+    display: none;
+}
+
+/* 1. ROW STYLE: Ini kunci agar semua sejajar */
+.tree-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px; /* Padding seragam */
+    cursor: pointer;
+    text-decoration: none;
+    color: #333;
+    transition: background 0.2s;
+    border-radius: 6px;
+}
+
+/* Hover effect */
+.tree-row:hover {
+    background-color: #f5f5f5;
+    color: #6C63FF;
+}
+
+/* 2. LEVELING & INDENTASI (Membuat tangga ke kanan) */
+
+/* Container anak */
+.tree-children {
+    display: flex;
+    flex-direction: column;
+    /* Garis panduan vertikal di kiri */
+    border-left: 2px solid #f0f0f0; 
+    margin-left: 12px; /* Jarak garis dari kiri */
+    padding-left: 10px; /* Jarak konten dari garis */
+}
+
+/* Level 1 (Top Kategori) */
+.level-1 .tree-label, .level-1-single {
+    font-weight: 600;
+    font-size: 15px;
+}
+
+/* Level 2 (Sub Kategori) */
+.level-2 .tree-label, .tree-link.level-2 {
+    font-size: 14px;
+    font-weight: 400;
+}
+
+/* Level 3 (Sub-Sub Kategori) */
+.tree-link.level-3 {
+    font-size: 13.5px;
+    color: #666;
+    padding-left: 10px;
+}
+
+/* 3. ICON & LABEL */
+.tree-arrow {
+    font-size: 11px;
+    color: #999;
+    transition: transform 0.2s ease;
+}
+
+/* Putar panah saat dibuka */
+details[open] > summary .tree-arrow {
+    transform: rotate(180deg);
+    color: #6C63FF;
+}
+
+/* Link View All (Lihat Semua) */
+.view-all {
+    font-size: 12px;
+    font-style: italic;
+    color: #aaa;
+    margin-bottom: 5px;
+    padding-left: 10px;
+    display: block;
+    text-decoration: none;
+}
+.view-all:hover { color: #6C63FF; }
+
+/* Jarak antar elemen */
+.mt-4 {
+    margin-top: 30px;
+}
+
+/* Radio Button Style */
+.radio-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #444;
+}
+/* Warna untuk kategori yang sedang dipilih */
+.active-cat {
+    color: #6C63FF !important;
+    font-weight: 700 !important;
+    background-color: rgba(108, 99, 255, 0.05);
+}
+
+/* Jarak antar filter section */
+.filter-section {
+    margin-top: 25px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+.radio-item input {
+    accent-color: #6C63FF;
+}
 #urutkan:hover .dropdown-content {
     display: block;
 }

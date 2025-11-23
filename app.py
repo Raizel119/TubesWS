@@ -268,6 +268,9 @@ def load_more():
 def detail(id):
     q = queries.get_book_detail_query(id)
     rows = run_query(q)
+    if rows:
+        print("DEBUG DATA DARI FUSEKI:", rows[0])
+        print("DEBUG URL:", rows[0].get("URL"))
     if not rows:
         abort(404)
     r = rows[0]
@@ -291,6 +294,7 @@ def detail(id):
         "Format": r.get("Format", {}).get("value", ""),
         "Deskripsi": r.get("Deskripsi", {}).get("value", ""),
         "Gambar": r.get("Gambar", {}).get("value", "/static/img/cover.avif"),
+        "URL": r.get("URL", {}).get("value", "#"),
         "id": id
     }
 

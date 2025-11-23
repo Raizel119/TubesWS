@@ -154,6 +154,19 @@
                         <p>{{ book.Berat }}</p>
                     </div>
 
+                    <div class="jd">
+                        <p><strong>Link Gramedia</strong></p>
+                        <p>
+                            {% if book.URL and book.URL != '#' %}
+                                <a href="{{ book.URL }}" target="_blank" style="color: #007bff; text-decoration: underline;">
+                                    Buka Website <i class="fas fa-external-link-alt" style="font-size: 0.8em;"></i>
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </p>
+                    </div>
+
                 </div>
             </div>
 

@@ -56,7 +56,7 @@ def get_book_detail_query(book_id):
     return f"""
     SELECT ?Judul ?Penulis ?Harga ?KategoriUtama
            ?Sub1 ?Sub2 ?Sub3 ?Penerbit ?TanggalTerbit ?ISBN ?Halaman ?Bahasa
-           ?Panjang ?Lebar ?Berat ?Format ?Deskripsi ?Gambar
+           ?Panjang ?Lebar ?Berat ?Format ?Deskripsi ?Gambar ?URL
     WHERE {{
         ?b rdf:type bu:Buku .
         FILTER(STRAFTER(STR(?b), "#") = "{book_id}")
@@ -78,6 +78,7 @@ def get_book_detail_query(book_id):
         OPTIONAL {{ ?b bu:Format ?Format . }}
         OPTIONAL {{ ?b bu:Deskripsi ?Deskripsi . }}
         OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
+        OPTIONAL {{ ?b bu:URL ?URL . }}
     }}
     LIMIT 1
     """

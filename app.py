@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, abort, jsonify
 from SPARQLWrapper import SPARQLWrapper, JSON
-from urllib.parse import quote
-
+from urllib.parse import quote, unquote
+import re
 import queries 
 
 app = Flask(__name__)
@@ -18,7 +18,11 @@ def run_query(query_string):
     sparql = SPARQLWrapper(FUSEKI_URL)
     sparql.setQuery(queries.PREFIX + "\n" + query_string)
     sparql.setReturnFormat(JSON)
-    return sparql.query().convert()["results"]["bindings"]
+    try:
+        return sparql.query().convert()["results"]["bindings"]
+    except Exception as e:
+        print(f"SPARQL Error: {e}")
+        return []
 
 def map_book_row(row):
     gambar = row.get("Gambar", {}).get("value", "")
@@ -50,10 +54,8 @@ def load_nested_map():
     nested = {}
 
     def clean(val):
-        if not val:
-            return None
-        if val.strip().lower() == "tidak ditemukan":
-            return None
+        if not val: return None
+        if val.strip().lower() == "tidak ditemukan": return None
         return val
 
     for r in rows:
@@ -62,32 +64,23 @@ def load_nested_map():
         sub2 = clean(r.get("sub2", {}).get("value"))
         sub3 = clean(r.get("sub3", {}).get("value"))
 
-        if not cat:
-            continue
+        if not cat: continue
 
-        if cat not in nested:
-            nested[cat] = {}
+        if cat not in nested: nested[cat] = {}
 
         if sub1:
-            if sub1 not in nested[cat]:
-                nested[cat][sub1] = {}
-
+            if sub1 not in nested[cat]: nested[cat][sub1] = {}
             if sub2:
-                if sub2 not in nested[cat][sub1]:
-                    nested[cat][sub1][sub2] = []
-
+                if sub2 not in nested[cat][sub1]: nested[cat][sub1][sub2] = []
                 if sub3 and sub3 not in nested[cat][sub1][sub2]:
                     nested[cat][sub1][sub2].append(sub3)
-
     return nested
 
-
 # -------------------------------------------------
-# Filter String Builder
+# Filter Builder
 # -------------------------------------------------
 def build_filter_string(search_query, current_filter, current_lang, page_range):
     sq = search_query.replace('"', '\\"')
-
     filter_clauses = []
     
     # 1. Kategori
@@ -109,7 +102,7 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
     if current_lang != "all":
         filter_clauses.append(f'?b bu:Bahasa "{current_lang}" .')
 
-    # 3. Halaman (Ambil Logika dari queries.py)
+    # 3. Halaman
     page_clause = queries.get_page_filter_clause(page_range)
     if page_clause:
         filter_clauses.append(page_clause)
@@ -128,7 +121,7 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
 
 def get_books(search_query="", current_filter="", current_lang="all", page_range="all", selected_sort_price="asc", limit=20, offset=0):
     filters_block = build_filter_string(search_query, current_filter, current_lang, page_range)
-
+    
     order_clause = ""
     if selected_sort_price == "desc":
         order_clause = "ORDER BY DESC(xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', '')))"
@@ -136,7 +129,6 @@ def get_books(search_query="", current_filter="", current_lang="all", page_range
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
 
     q = queries.get_books_query(filters_block, order_clause, limit, offset)
-    
     rows = run_query(q)
     return [map_book_row(r) for r in rows]
 
@@ -144,7 +136,6 @@ def get_total_books_count(search_query="", current_filter="", current_lang="all"
     filters_block = build_filter_string(search_query, current_filter, current_lang, page_range)
     q = queries.get_total_count_query(filters_block)
     rows = run_query(q)
-    
     if rows:
         return int(rows[0]["count"]["value"])
     return 0
@@ -157,26 +148,44 @@ def group_books_by_category(all_books):
         grouped[cat].append(b)
     return {k: v[:10] for k, v in grouped.items()}
 
+# --- FUNGSI INI YANG DIPERBAIKI UNTUK TAG FILTER ---
 def build_active_filters(current_filter, current_lang, search_query, page_range):
     active = []
 
+    # 1. Tag Search Query (Key: 'query')
     if search_query:
-        active.append({"value": search_query})
+        active.append({
+            "key": "query", 
+            "value": f'"{search_query}"'
+        })
 
+    # 2. Tag Kategori (Key: 'filter')
     if current_filter:
-        import re
+        # Bersihkan prefix (cat_, sub_) agar tampilan rapi
         clean = re.sub(r'^(cat_|sub_|subsub_|sub3_)', '', current_filter)
-        active.append({"value": clean})
+        # Unquote untuk mengubah %20 menjadi spasi kembali
+        clean_display = unquote(clean)
+        
+        active.append({
+            "key": "filter", 
+            "value": clean_display
+        })
 
+    # 3. Tag Bahasa (Key: 'lang')
     if current_lang and current_lang != "all":
-        active.append({"value": current_lang})
+        active.append({
+            "key": "lang", 
+            "value": current_lang
+        })
 
+    # 4. Tag Halaman (Key: 'page_range')
     if page_range and page_range != "all":
-        active.append({"value": f"{page_range} Hal"})
+        active.append({
+            "key": "page_range", 
+            "value": f"{page_range} Hal"
+        })
 
     return active
-
-
 
 # -----------------------
 # ROUTES
@@ -196,9 +205,13 @@ def index():
     all_languages = load_languages()
     nested_category_map = load_nested_map()
 
-    all_books_for_shelves = get_books("", "", "all", "all", "asc", limit=100, offset=0)
-    grouped_books = group_books_by_category(all_books_for_shelves)
+    # Untuk carousel shelves (hanya jika tidak ada filter)
+    grouped_books = {}
+    if not (search_query or current_filter or current_lang != 'all' or page_range != 'all'):
+        all_books_for_shelves = get_books("", "", "all", "all", "asc", limit=100, offset=0)
+        grouped_books = group_books_by_category(all_books_for_shelves)
 
+    # Build Filter Tags
     active_filters = build_active_filters(current_filter, current_lang, search_query, page_range)
 
     return render_template(
@@ -215,39 +228,7 @@ def index():
         search_query=search_query,
         selected_sort_price=selected_sort_price,
         page_range=page_range,
-        active_filters=active_filters,
-        current_selected_cat=current_filter.replace("cat_", "") if current_filter.startswith("cat_") else None,
-        current_selected_sub=current_filter.replace("sub_", "") if current_filter.startswith("sub_") else None
-    )
-
-@app.route("/search")
-def search():
-    search_query = request.args.get("query", "")
-    current_filter = request.args.get("filter", "")
-    current_lang = request.args.get("lang", "all")
-    selected_sort_price = request.args.get("sort_price", "asc")
-    page_range = request.args.get("page_range", "all")
-
-    books = get_books(search_query, current_filter, current_lang, page_range, selected_sort_price, limit=20, offset=0)
-    total_count = get_total_books_count(search_query, current_filter, current_lang, page_range)
-
-    all_categories = load_categories()
-    all_languages = load_languages()
-    nested_category_map = load_nested_map()
-    
-    return render_template(
-        "search.html",
-        books=books,
-        search_query=search_query,
-        current_filter=current_filter,
-        current_lang=current_lang,
-        selected_sort_price=selected_sort_price,
-        page_range=page_range, 
-        nested_category_map=nested_category_map,
-        all_categories=all_categories,
-        all_languages=all_languages,
-        total_count=total_count,
-        results_count=len(books)
+        active_filters=active_filters # Data ini sekarang punya 'key' dan 'value'
     )
 
 @app.route("/api/load-more")
@@ -268,9 +249,7 @@ def load_more():
 def detail(id):
     q = queries.get_book_detail_query(id)
     rows = run_query(q)
-    if rows:
-        print("DEBUG DATA DARI FUSEKI:", rows[0])
-        print("DEBUG URL:", rows[0].get("URL"))
+    
     if not rows:
         abort(404)
     r = rows[0]

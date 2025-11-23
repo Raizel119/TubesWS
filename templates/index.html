@@ -12,6 +12,12 @@
     <link rel="stylesheet"href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
+    <div id="global-loader">
+        <div class="spinner-content">
+            <i class="fas fa-circle-notch spinner-icon"></i>
+            <div class="loading-text">Sedang Memuat...</div>
+        </div>
+    </div>
 
     <header class="navbar">
         <div class="container">
@@ -78,7 +84,7 @@
     {% for category, sub_map in nested_category_map.items() %}
         
         {% if sub_map %}
-        <details class="tree-group level-1" {% if 'cat_' + category in current_filter %}open{% endif %}>
+        <details class="tree-group level-1" {% if 'cat_' + category in current_filter %}open{% endif %} >
             <summary class="tree-summary tree-row">
                 <span class="tree-label">{{ category }}</span>
                 <i class="fa-solid fa-chevron-down tree-arrow"></i>
@@ -86,7 +92,7 @@
             
             <div class="tree-children">
                 <a href="/?filter=cat_{{ category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
-                   class="tree-link view-all {% if current_filter == 'cat_' + category %}active-cat{% endif %}">
+                   class="tree-link view-all {% if current_filter == 'cat_' + category %}active-cat{% endif %}" onclick="showLoader()">
                     Lihat Semua {{ category }}
                 </a>
 
@@ -101,13 +107,13 @@
                         
                         <div class="tree-children">
                             <a href="/?filter=sub_{{ sub_category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
-                               class="tree-link view-all {% if current_filter == 'sub_' + sub_category %}active-cat{% endif %}">
+                               class="tree-link view-all {% if current_filter == 'sub_' + sub_category %}active-cat{% endif %}" onclick="showLoader()">
                                 Semua {{ sub_category }}
                             </a>
 
                             {% for sub2, sub3_list in sub2_map.items() %}
                                 <a href="/?filter=subsub_{{ sub2 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
-                                   class="tree-link tree-row level-3 {% if current_filter == 'subsub_' + sub2 %}active-cat{% endif %}">
+                                   class="tree-link tree-row level-3 {% if current_filter == 'subsub_' + sub2 %}active-cat{% endif %}" onclick="showLoader()">
                                     {{ sub2 }}
                                 </a>
                             {% endfor %}
@@ -116,7 +122,7 @@
                     
                     {% else %}
                         <a href="/?filter=sub_{{ sub_category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
-                           class="tree-link tree-row level-2 {% if current_filter == 'sub_' + sub_category %}active-cat{% endif %}">
+                           class="tree-link tree-row level-2 {% if current_filter == 'sub_' + sub_category %}active-cat{% endif %}" onclick="showLoader()">
                             {{ sub_category }}
                         </a>
                     {% endif %}
@@ -128,7 +134,7 @@
         {% else %}
             <div class="tree-item-single">
                 <a href="/?filter=cat_{{ category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
-                   class="tree-link tree-row level-1-single {% if current_filter == 'cat_' + category %}active-cat{% endif %}">
+                   class="tree-link tree-row level-1-single {% if current_filter == 'cat_' + category %}active-cat{% endif %}" onclick="showLoader()">
                     {{ category }}
                 </a>
             </div>
@@ -149,12 +155,12 @@
                 
                 <div class="filter-list" style="padding-left: 10px; margin-top: 10px;">
                     <label class="radio-item">
-                        <input type="radio" name="lang" value="all" {% if current_lang == 'all' %}checked{% endif %} onchange="this.form.submit()">
+                        <input type="radio" name="lang" value="all" {% if current_lang == 'all' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
                         <span>Semua Bahasa</span>
                     </label>
                     {% for lang in all_languages %}
                     <label class="radio-item">
-                        <input type="radio" name="lang" value="{{ lang }}" {% if current_lang == lang %}checked{% endif %} onchange="this.form.submit()">
+                        <input type="radio" name="lang" value="{{ lang }}" {% if current_lang == lang %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
                         <span>{{ lang }}</span>
                     </label>
                     {% endfor %}
@@ -172,19 +178,19 @@
                 
                 <div class="filter-list" style="padding-left: 10px; margin-top: 10px;">
                     <label class="radio-item">
-                        <input type="radio" name="page_range" value="all" {% if page_range == 'all' %}checked{% endif %} onchange="this.form.submit()">
+                        <input type="radio" name="page_range" value="all" {% if page_range == 'all' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
                         <span>Semua</span>
                     </label>
                     <label class="radio-item">
-                        <input type="radio" name="page_range" value="0-100" {% if page_range == '0-100' %}checked{% endif %} onchange="this.form.submit()">
+                        <input type="radio" name="page_range" value="0-100" {% if page_range == '0-100' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
                         <span>0 - 100 Halaman</span>
                     </label>
                     <label class="radio-item">
-                        <input type="radio" name="page_range" value="100-200" {% if page_range == '100-200' %}checked{% endif %} onchange="this.form.submit()">
+                        <input type="radio" name="page_range" value="100-200" {% if page_range == '100-200' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
                         <span>100 - 200 Halaman</span>
                     </label>
                     <label class="radio-item">
-                        <input type="radio" name="page_range" value="200+" {% if page_range == '200+' %}checked{% endif %} onchange="this.form.submit()">
+                        <input type="radio" name="page_range" value="200+" {% if page_range == '200+' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
                         <span>> 200 Halaman</span>
                     </label>
                 </div>
@@ -232,8 +238,8 @@
                             <span class="arrow-down" style="border: solid #1E1E1E; border-width: 0 2px 2px 0; display: inline-block; padding: 3px; transform: rotate(45deg);"></span> 
                         </a>
                         <div class="dropdown-content">
-                            <a href="/?sort_price=asc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}">Harga Terendah</a>
-                            <a href="/?sort_price=desc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}">Harga Tertinggi</a>
+                            <a href="/?sort_price=asc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}" onclick="showLoader()">Harga Terendah</a>
+                            <a href="/?sort_price=desc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}" onclick="showLoader()">Harga Tertinggi</a>
                         </div>
                     </div>
                 </div>
@@ -245,18 +251,25 @@
                         {% if search_query %} untuk "<strong>{{ search_query }}</strong>" {% endif %}
                     </div>
                     
-                    {% if active_filters|length > 0 %}
-                    <div class="active-filters-container">
-                        <a href="/" class="filter-pill clear-all"><span>&times;</span></a>
-                        {% for filter in active_filters %}
-                            <div class="filter-pill">
-                                <i class="fas fa-tag icon-tag"></i>
-                                <span>{{ filter.value }}</span>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
+                   {% if active_filters|length > 0 %}
+<div class="active-filters-container">
+    
+    <button onclick="clearAllFilters()" class="filter-pill clear-all-btn" title="Hapus Semua Filter">
+        <i class="fas fa-times"></i>
+    </button>
 
+    {% for filter in active_filters %}
+        <div class="filter-pill" onclick="removeParam('{{ filter.key }}')">
+            <i class="fas fa-tag icon-tag"></i>
+            <span>{{ filter.value }}</span>
+            
+            <span class="remove-single">
+                <i class="fas fa-times"></i>
+            </span>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
                     <div class="results-grid" id="books-container">
                         {% for book in books %}
                             <div class="book-card-small">
@@ -604,11 +617,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- (KODE LAIN SEPERTI HISTORY & LAZY LOAD BIARKAN TETAP DI BAWAH SINI) ---
-    // ...
-    // ...
 });
 </script>
+<script>
+    // Fungsi ini HARUS berada di luar document.addEventListener
+    // agar bisa dipanggil langsung oleh onclick="" dan onchange="" di HTML
+    function showLoader() {
+        const loader = document.getElementById('global-loader');
+        if (loader) {
+            loader.style.display = 'flex'; // Paksa tampil
+        }
+    }
 
+    // Sembunyikan loader saat user menekan tombol Back di browser
+    window.addEventListener("pageshow", function(event) {
+        const loader = document.getElementById('global-loader');
+        if (event.persisted && loader) {
+            loader.style.display = "none";
+        }
+    });
+</script>
+<script>
+    // --- FUNGSI UNTUK MENGHAPUS PARAMETER URL (HAPUS FILTER SATUAN) ---
+    function removeParam(key) {
+        // 1. Ambil URL saat ini
+        const url = new URL(window.location.href);
+        
+        // 2. Hapus parameter spesifik (misal: 'lang', 'filter', atau 'page_range')
+        url.searchParams.delete(key);
+        
+        // 3. Reset pagination ke halaman 1 jika filter berubah (opsional, good practice)
+        if (url.searchParams.has('offset')) {
+            url.searchParams.delete('offset');
+        }
+
+        // 4. Tampilkan loader dan reload halaman dengan URL baru
+        if (typeof showLoader === 'function') showLoader();
+        window.location.href = url.toString();
+    }
+
+    // --- FUNGSI HAPUS SEMUA FILTER (RESET KE HOME) ---
+    function clearAllFilters() {
+        if (typeof showLoader === 'function') showLoader();
+        // Redirect ke root (/) atau hapus semua query params
+        window.location.href = '/';
+    }
+</script>
 </body>
 </html>

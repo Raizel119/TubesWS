@@ -1034,3 +1034,114 @@ a {
 .filter-pill.clear-all:hover {
     background-color: #e9ecef;
 }
+
+.sidebar-category ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+/* Item Kategori (Baris) */
+.cat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px; /* Sedikit padding agar lega */
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.cat-item:hover {
+    background-color: #f8f9fa;
+}
+
+/* Link Kategori */
+.cat-item a {
+    text-decoration: none;
+    color: #333;
+    flex-grow: 1;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.cat-item a.active {
+    color: var(--primary-color); /* Menggunakan variabel warna dari root */
+    font-weight: 700;
+}
+
+/* Tombol Panah (Toggle) */
+.toggle-btn {
+    padding: 0 5px;
+    color: #999;
+    transition: transform 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-btn:hover {
+    color: var(--dark-text);
+}
+
+/* Submenu Container (Default Tersembunyi) */
+.submenu {
+    display: none; /* KUNCI: Sembunyi by default */
+    background-color: #fff;
+}
+
+/* Indentasi Bertingkat */
+.submenu .cat-item {
+    padding-left: 30px; /* Level 2 */
+    font-size: 0.95em;
+    background-color: #fafafa;
+}
+
+.submenu .submenu .cat-item {
+    padding-left: 45px; /* Level 3 */
+    background-color: #f5f5f5;
+}
+
+.submenu .submenu .submenu .leaf-link {
+    padding-left: 60px; /* Level 4 */
+}
+
+/* Link Terakhir (Tanpa Panah) */
+.leaf-link {
+    display: block;
+    padding: 8px 15px 8px 0;
+    font-size: 13px;
+    color: #666;
+    text-decoration: none;
+    border-bottom: 1px solid #f0f0f0;
+    transition: color 0.2s;
+}
+
+.leaf-link:hover {
+    color: var(--primary-color);
+    background-color: #f0f0ff;
+}
+
+.leaf-link.active {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+/* Utility Classes */
+.rotate {
+    transform: rotate(180deg); /* Memutar panah saat dibuka */
+}
+
+/* Sidebar Container (Agar rapi di layout grid) */
+.home-sidebar {
+    border-right: 1px solid var(--border-color);
+    background: var(--white);
+}
+
+.sidebar-title {
+    font-size: 1.2em;
+    font-weight: 700;
+    padding: 20px 15px 10px 15px;
+    margin: 0;
+    border-bottom: 2px solid #f0f0f0;
+}

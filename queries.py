@@ -32,7 +32,7 @@ SELECT DISTINCT ?cat ?sub1 ?sub2 ?sub3 WHERE {
 ORDER BY ?cat ?sub1 ?sub2 ?sub3
 """
 
-# 3. LOGIC FILTER HALAMAN (BARU - Dipindah ke sini)
+# 3. LOGIC FILTER HALAMAN
 def get_page_filter_clause(page_range):
     """
     Mengembalikan string FILTER SPARQL berdasarkan rentang halaman.

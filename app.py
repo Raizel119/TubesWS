@@ -48,24 +48,39 @@ def load_languages():
 def load_nested_map():
     rows = run_query(queries.GET_NESTED_MAP)
     nested = {}
+
+    def clean(val):
+        if not val:
+            return None
+        if val.strip().lower() == "tidak ditemukan":
+            return None
+        return val
+
     for r in rows:
-        cat = r["cat"]["value"]
-        sub1 = r.get("sub1", {}).get("value")
-        sub2 = r.get("sub2", {}).get("value")
-        sub3 = r.get("sub3", {}).get("value")
+        cat = clean(r["cat"]["value"])
+        sub1 = clean(r.get("sub1", {}).get("value"))
+        sub2 = clean(r.get("sub2", {}).get("value"))
+        sub3 = clean(r.get("sub3", {}).get("value"))
+
+        if not cat:
+            continue
 
         if cat not in nested:
             nested[cat] = {}
+
         if sub1:
             if sub1 not in nested[cat]:
                 nested[cat][sub1] = {}
+
             if sub2:
                 if sub2 not in nested[cat][sub1]:
                     nested[cat][sub1][sub2] = []
-                if sub3:
-                    if sub3 not in nested[cat][sub1][sub2]:
-                        nested[cat][sub1][sub2].append(sub3)
+
+                if sub3 and sub3 not in nested[cat][sub1][sub2]:
+                    nested[cat][sub1][sub2].append(sub3)
+
     return nested
+
 
 # -------------------------------------------------
 # Filter String Builder
@@ -144,11 +159,24 @@ def group_books_by_category(all_books):
 
 def build_active_filters(current_filter, current_lang, search_query, page_range):
     active = []
-    if search_query: active.append({"value": search_query})
-    if current_filter: active.append({"value": current_filter})
-    if current_lang and current_lang != "all": active.append({"value": current_lang})
-    if page_range and page_range != "all": active.append({"value": f"{page_range} Hal"})
+
+    if search_query:
+        active.append({"value": search_query})
+
+    if current_filter:
+        import re
+        clean = re.sub(r'^(cat_|sub_|subsub_|sub3_)', '', current_filter)
+        active.append({"value": clean})
+
+    if current_lang and current_lang != "all":
+        active.append({"value": current_lang})
+
+    if page_range and page_range != "all":
+        active.append({"value": f"{page_range} Hal"})
+
     return active
+
+
 
 # -----------------------
 # ROUTES

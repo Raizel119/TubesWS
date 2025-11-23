@@ -11,7 +11,9 @@ def uquote_filter(s):
     if s:
         return quote(s, safe='')
     return ""
-
+@app.route("/about") 
+def about():
+    return render_template("about.html") 
 FUSEKI_URL = "http://localhost:3030/bookara/query"
 
 def run_query(query_string):

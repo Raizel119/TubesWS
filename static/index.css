@@ -371,11 +371,11 @@ a {
 .filter-wrapper {
     display: inline-block;
 }
-#urutkan {
+/* #urutkan {
     border: 1px solid var(--border-color); /* <-- Ini border-nya */
-    border-radius: 12px; /* Sudut membulat */
-    padding: 8px 18px;
-}
+    /* border-radius: 12px; /* Sudut membulat */
+    /* padding: 8px 18px;
+} */ */ */
 
 #urutkan:hover .dropdown-content {
     display: block;

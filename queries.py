@@ -34,13 +34,9 @@ ORDER BY ?cat ?sub1 ?sub2 ?sub3
 
 # 3. LOGIC FILTER HALAMAN
 def get_page_filter_clause(page_range):
-    """
-    Mengembalikan string FILTER SPARQL berdasarkan rentang halaman.
-    """
     if not page_range or page_range == "all":
         return ""
     
-    # Pastikan cast ke integer: xsd:integer(?Halaman)
     if page_range == "0-100":
         return "FILTER(xsd:integer(?Halaman) <= 100)"
     elif page_range == "100-200":
@@ -50,7 +46,47 @@ def get_page_filter_clause(page_range):
     
     return ""
 
-# 4. Query Dinamis
+# 4. Query Dinamis & Builder
+
+def build_filter_string(search_query, current_filter, current_lang, page_range):
+    sq = search_query.replace('"', '\\"')
+    filter_clauses = []
+    
+    # 1. Kategori
+    if current_filter:
+        if current_filter.startswith("cat_"):
+            val = current_filter.replace("cat_", "")
+            filter_clauses.append(f'?b bu:KategoriUtama "{val}" .')
+        elif current_filter.startswith("sub_"):
+            val = current_filter.replace("sub_", "")
+            filter_clauses.append(f'FILTER(?Sub1 = "{val}" || ?Sub2 = "{val}" || ?Sub3 = "{val}")')
+        elif current_filter.startswith("subsub_"):
+            val = current_filter.replace("subsub_", "")
+            filter_clauses.append(f'?b bu:Subkategori2 "{val}" .')
+        elif current_filter.startswith("sub3_"):
+            val = current_filter.replace("sub3_", "")
+            filter_clauses.append(f'?b bu:Subkategori3 "{val}" .')
+
+    # 2. Bahasa
+    if current_lang != "all":
+        filter_clauses.append(f'?b bu:Bahasa "{current_lang}" .')
+
+    # 3. Halaman
+    page_clause = get_page_filter_clause(page_range)
+    if page_clause:
+        filter_clauses.append(page_clause)
+
+    # 4. Search Text
+    search_clause = ""
+    if sq:
+        search_clause = f'''
+        FILTER(
+            CONTAINS(LCASE(?Judul), LCASE("{sq}")) ||
+            CONTAINS(LCASE(?Penulis), LCASE("{sq}"))
+        )
+        '''
+    
+    return "\n".join(filter_clauses) + ("\n" + search_clause if search_clause else "")
 
 def get_book_detail_query(book_id):
     return f"""
@@ -83,12 +119,34 @@ def get_book_detail_query(book_id):
     LIMIT 1
     """
 
-def get_books_query(filters_block, order_clause, limit=20, offset=0):
-    if not order_clause:
+# [UPDATE PENTING] Logika Sorting Terpusat
+def get_books_query(filters_block, sort_option, limit=20, offset=0):
+    
+    order_clause = ""
+    
+    # Logika Sorting
+    if sort_option == "price_asc":
+        # Urutkan Harga Terendah
+        order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
+    
+    elif sort_option == "price_desc":
+        # Urutkan Harga Tertinggi
+        order_clause = "ORDER BY DESC(xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', '')))"
+    
+    elif sort_option == "date_newest":
+        # Urutkan Tahun Terbaru (DESC)
+        order_clause = "ORDER BY DESC(?extractedYear)"
+        
+    elif sort_option == "date_oldest":
+        # Urutkan Tahun Terlama (ASC)
+        order_clause = "ORDER BY ASC(?extractedYear)"
+    
+    else:
+        # Default: Harga Terendah (jika sort_option kosong)
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
 
     return f"""
-    SELECT ?id ?Judul ?Penulis ?Harga ?KategoriUtama ?Sub1 ?Sub2 ?Sub3 ?Gambar WHERE {{
+    SELECT ?id ?Judul ?Penulis ?Harga ?KategoriUtama ?Sub1 ?Sub2 ?Sub3 ?Gambar ?TanggalTerbit ?extractedYear WHERE {{
         ?b rdf:type bu:Buku .
         ?b bu:Judul ?Judul .
         OPTIONAL {{ ?b bu:Penulis ?Penulis . }}
@@ -98,8 +156,12 @@ def get_books_query(filters_block, order_clause, limit=20, offset=0):
         OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
         OPTIONAL {{ ?b bu:Subkategori3 ?Sub3 . }}
         OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
-        # Kita butuh ?Halaman untuk filter, meskipun tidak ditampilkan di tabel utama
         OPTIONAL {{ ?b bu:Halaman ?Halaman . }}
+        OPTIONAL {{ ?b bu:TanggalTerbit ?TanggalTerbit . }}
+
+        # [LOGIKA EKSTRAKSI TAHUN]
+        # Mengambil 4 digit angka dari string TanggalTerbit (misal: "15 Jan 2024" -> 2024)
+        BIND(xsd:integer(REPLACE(STR(?TanggalTerbit), ".*([0-9]{4}).*", "$1")) AS ?extractedYear)
 
         BIND(STRAFTER(STR(?b), "#") AS ?id)
 

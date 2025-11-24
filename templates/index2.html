@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookara</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='index.css') }}">
+    <link rel="preconnect" href="https.googleapis.com">
+    <link rel="preconnect" href="https.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=search" />
+    <link rel="stylesheet"href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+    <div id="global-loader">
+        <div class="spinner-content">
+            <i class="fas fa-circle-notch spinner-icon"></i>
+            <div class="loading-text">Sedang Memuat...</div>
+        </div>
+    </div>
+
+    <header class="navbar">
+        <div class="container">
+            <div class="navbar-left">
+                <a href="/" class="navbar-brand">
+                    <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Bookara Logo">
+                </a>
+                <div class="dropdown">
+                    <a href="/" class="nav-link">Kategori <span class="arrow"></span></a>
+                    <div class="dropdown-content">
+                        {% for cat in all_categories %}
+                            <a href="/?filter=cat_{{ cat | uquote }}">{{ cat }}</a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="navbar-right">
+                <a href="/" class="nav-link active">Home</a>
+                <a href="/about" class="nav-link">About Us</a>
+                <a href="#contact" class="nav-link">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+      
+        {% if not current_filter and not search_query and current_lang == 'all' and page_range == 'all' and not request.args.get('sort_price') %}
+        <section class="hero-carousel">
+            <div class="carousel-slider">
+                <div class="slide" id="slide-1"> 
+                    <div class="slide-content">
+                        <h1>Explore Great Books</h1>
+                        <p>Temukan dunia baru di setiap halaman.</p>
+                    </div>
+                </div>
+                <div class="slide" id="slide-2">
+                    <div class="slide-content">
+                        <h1>Find Your Book Match</h1>
+                        <p>Pilih bacaan yang paling sesuai dengan minat dan gaya Anda.</p>
+                    </div>
+                </div>
+                <div class="slide" id="slide-3">
+                    <div class="slide-content">
+                        <h1>Browse by Category</h1>
+                        <p>Pilih kategori favorit Anda untuk menemukan bacaan yang tepat.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+<div class="container page-layout">
+<aside class="filter-sidebar">
+    <form action="/" method="GET" id="filter-form-sidebar">
+        <input type="hidden" name="query" value="{{ search_query or '' }}">
+        <input type="hidden" name="sort_price" value="{{ selected_sort_price or '' }}">
+        <input type="hidden" name="filter" value="{{ current_filter or '' }}">
+
+        <h2 class="filter-title">Filter</h2>
+
+<div class="filter-category-tree">
+    <h3 class="filter-subtitle">Kategori</h3>
+
+    {% for category, sub_map in nested_category_map.items() %}
+        
+        {% if sub_map %}
+        <details class="tree-group level-1" {% if 'cat_' + category in current_filter %}open{% endif %} >
+            <summary class="tree-summary tree-row">
+                <span class="tree-label">{{ category }}</span>
+                <i class="fa-solid fa-chevron-down tree-arrow"></i>
+            </summary>
+            
+            <div class="tree-children">
+                <a href="/?filter=cat_{{ category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
+                   class="tree-link view-all {% if current_filter == 'cat_' + category %}active-cat{% endif %}" onclick="showLoader()">
+                    Lihat Semua {{ category }}
+                </a>
+
+                {% for sub_category, sub2_map in sub_map.items() %}
+                    
+                    {% if sub2_map %}
+                    <details class="tree-group level-2" {% if 'sub_' + sub_category in current_filter %}open{% endif %}>
+                        <summary class="tree-summary tree-row">
+                            <span class="tree-label">{{ sub_category }}</span>
+                            <i class="fa-solid fa-chevron-down tree-arrow"></i>
+                        </summary>
+                        
+                        <div class="tree-children">
+                            <a href="/?filter=sub_{{ sub_category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
+                               class="tree-link view-all {% if current_filter == 'sub_' + sub_category %}active-cat{% endif %}" onclick="showLoader()">
+                                Semua {{ sub_category }}
+                            </a>
+
+                            {% for sub2, sub3_list in sub2_map.items() %}
+                                <a href="/?filter=subsub_{{ sub2 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
+                                   class="tree-link tree-row level-3 {% if current_filter == 'subsub_' + sub2 %}active-cat{% endif %}" onclick="showLoader()">
+                                    {{ sub2 }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </details>
+                    
+                    {% else %}
+                        <a href="/?filter=sub_{{ sub_category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
+                           class="tree-link tree-row level-2 {% if current_filter == 'sub_' + sub_category %}active-cat{% endif %}" onclick="showLoader()">
+                            {{ sub_category }}
+                        </a>
+                    {% endif %}
+
+                {% endfor %}
+            </div>
+        </details>
+
+        {% else %}
+            <div class="tree-item-single">
+                <a href="/?filter=cat_{{ category | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort_price={{ selected_sort_price or '' }}" 
+                   class="tree-link tree-row level-1-single {% if current_filter == 'cat_' + category %}active-cat{% endif %}" onclick="showLoader()">
+                    {{ category }}
+                </a>
+            </div>
+        {% endif %}
+
+    {% endfor %}
+</div>
+
+    <!-- === 2. FILTER BAHASA === -->
+        <div class="filter-section mt-4">
+            <!-- Gunakan class tree-group agar konsisten -->
+            <details class="tree-group" open>
+                <!-- Gunakan tree-summary & tree-row agar panah di kanan & ada hover effect -->
+                <summary class="tree-summary tree-row">
+                    <span class="tree-label" style="font-weight: 700; font-size: 16px;">Bahasa</span>
+                    <i class="fa-solid fa-chevron-down tree-arrow"></i>
+                </summary>
+                
+                <div class="filter-list" style="padding-left: 10px; margin-top: 10px;">
+                    <label class="radio-item">
+                        <input type="radio" name="lang" value="all" {% if current_lang == 'all' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
+                        <span>Semua Bahasa</span>
+                    </label>
+                    {% for lang in all_languages %}
+                    <label class="radio-item">
+                        <input type="radio" name="lang" value="{{ lang }}" {% if current_lang == lang %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
+                        <span>{{ lang }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </details>
+        </div>
+
+        <!-- === 3. FILTER HALAMAN === -->
+        <div class="filter-section mt-4">
+            <details class="tree-group" open>
+                <summary class="tree-summary tree-row">
+                    <span class="tree-label" style="font-weight: 700; font-size: 16px;">Halaman</span>
+                    <i class="fa-solid fa-chevron-down tree-arrow"></i>
+                </summary>
+                
+                <div class="filter-list" style="padding-left: 10px; margin-top: 10px;">
+                    <label class="radio-item">
+                        <input type="radio" name="page_range" value="all" {% if page_range == 'all' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
+                        <span>Semua</span>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="page_range" value="0-100" {% if page_range == '0-100' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
+                        <span>0 - 100 Halaman</span>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="page_range" value="100-200" {% if page_range == '100-200' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
+                        <span>100 - 200 Halaman</span>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="page_range" value="200+" {% if page_range == '200+' %}checked{% endif %} onchange="this.form.submit()" onclick="showLoader()">
+                        <span>> 200 Halaman</span>
+                    </label>
+                </div>
+            </details>
+        </div>
+    </form>
+</aside>
+            <section class="home-content">
+
+                <div class="search-sort-container" style="display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 30px; width: 100%;">
+                    
+<div class="search-bar-container" style="flex-grow: 1; position: relative; max-width: 100%;">
+    <form action="/" method="GET" class="search-bar" id="search-form" style="display: flex; align-items: center; background: #fff; border: 1px solid #e5e5e5; border-radius: 50px; padding: 12px 20px; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.03); position: relative;">
+        
+        <input type="hidden" name="filter" value="{{ current_filter or '' }}">
+        <input type="hidden" name="lang" value="{{ current_lang or 'all' }}">
+        <input type="hidden" name="sort_price" value="{{ selected_sort_price or '' }}">
+        
+        <span class="material-symbols-outlined" style="font-size: 22px; color: #888; flex-shrink: 0;">search</span>
+        
+        <input type="text" name="query" id="search-input" placeholder="Cari Judul Buku atau Penulis" value="{{ search_query or '' }}" autocomplete="off" style="flex-grow: 1; border: none; outline: none; font-size: 1em; margin-left: 10px; background: transparent; padding-right: 30px;">
+        
+        <button type="button" id="clear-search-btn" style="display: none; background: none; border: none; color: #999; cursor: pointer; font-size: 18px; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); padding: 5px;">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    </form>
+    
+    <div class="search-history" id="search-history-dropdown">
+        <div class="history-header">
+            <h3>Riwayat Pencarian</h3>
+            <button type="button" class="clear-history-btn" id="clear-history">Hapus Semua</button>
+        </div>
+        <ul class="history-list" id="history-list"></ul>
+    </div>
+</div>
+                    <div class="dropdown" id="urutkan" style="position: relative;">
+                        <a href="#" class="nav-link dropdown-toggle" style="display: flex; align-items: center; gap: 10px; border: 1px solid #E0E0E0; border-radius: 12px; padding: 10px 20px; background-color: #FFFFFF; min-width: 180px; justify-content: space-between; text-decoration: none;">
+                            <span class="filter-label" style="font-size: 0.9em; color: #6C757D;">Urutkan</span>
+                            <span style="font-weight: 600; color: #1E1E1E; font-size: 0.95em;">
+                                {% if selected_sort_price == 'asc' %}Harga Terendah
+                                {% elif selected_sort_price == 'desc' %}Harga Tertinggi
+                                {% else %}Harga Terendah
+                                {% endif %}
+                            </span>
+                            <span class="arrow-down" style="border: solid #1E1E1E; border-width: 0 2px 2px 0; display: inline-block; padding: 3px; transform: rotate(45deg);"></span> 
+                        </a>
+                        <div class="dropdown-content">
+                            <a href="/?sort_price=asc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}" onclick="showLoader()">Harga Terendah</a>
+                            <a href="/?sort_price=desc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}" onclick="showLoader()">Harga Tertinggi</a>
+                        </div>
+                    </div>
+                </div>
+
+                {% if current_filter or search_query or current_lang != 'all' or selected_sort_price %}
+                    
+                    <div class="results-header-count">
+                        Menampilkan <strong>{{ results_count }}</strong> dari <strong>{{ total_count }}</strong> produk
+                        {% if search_query %} untuk "<strong>{{ search_query }}</strong>" {% endif %}
+                    </div>
+                    
+                   {% if active_filters|length > 0 %}
+<div class="active-filters-container">
+    
+    <button onclick="clearAllFilters()" class="filter-pill clear-all-btn" title="Hapus Semua Filter">
+        <i class="fas fa-times"></i>
+    </button>
+
+    {% for filter in active_filters %}
+        <div class="filter-pill" onclick="removeParam('{{ filter.key }}')">
+            <i class="fas fa-tag icon-tag"></i>
+            <span>{{ filter.value }}</span>
+            
+            <span class="remove-single">
+                <i class="fas fa-times"></i>
+            </span>
+        </div>
+    {% endfor %}
+</div>
+{% endif %}
+                    <div class="results-grid" id="books-container">
+                        {% for book in books %}
+                            <div class="book-card-small">
+                                <a href="/book/{{ book.id }}" class="card-link">
+                                    <div class="card-image">
+                                        {% if book.Gambar and book.Gambar != 'Tidak ditemukan' and book.Gambar|length > 5 %}
+                                            <img src="{{ book.Gambar }}" 
+                                                 alt="{{ book.Judul }}"
+                                                 onerror=`this.onerror=null; this.src='{{ url_for("static", filename="img/placeholder.jpg") }}';`>
+                                        {% else %}
+                                            <img src="{{ url_for('static', filename='img/placeholder.jpg') }}" 
+                                                 alt="Gambar Tidak Tersedia">
+                                        {% endif %}
+                                    </div>
+                                    <div class="card-content">
+                                        <p class="author">{{ book['Penulis'] }}</p>
+                                        <h5 class="title">{{ book['Judul'] }}</h5>
+                                        {% if book['Harga'] %}
+                                        <p class="price">{{ book['Harga'] }}</p>
+                                        {% endif %}
+                                    </div>
+                                </a>
+                            </div>
+                        {% else %}
+                            <div class="no-results">
+                                <p>Maaf, buku tidak ditemukan.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <div id="loading-indicator" style="text-align: center; padding: 20px; display: none; color: #666;">
+                        <i class="fas fa-spinner fa-spin"></i> Memuat lebih banyak buku...
+                    </div>
+                    <div id="scroll-trigger" style="height: 20px; margin-bottom: 20px;"></div>
+
+                {% else %}
+                    {% for category, books in grouped_books.items() %}
+                        {% if books %}
+                        <div class="category-shelf">
+                            <div class="shelf-header">
+                                <h3>{{ category }}</h3>
+                                <a href="/?filter=cat_{{ category | uquote }}" class="see-more">See More <span>&rarr;</span></a>
+                            </div>
+                            <div class="book-list-horizontal">
+                                {% for book in books %}
+                                <div class="book-card-small">
+                                    <a href="/book/{{ book.id }}" class="card-link">
+                                        <div class="card-image">
+                                            {% if book.Gambar and book.Gambar != 'Tidak ditemukan' and book.Gambar|length > 5 %}
+                                                <img src="{{ book.Gambar }}" alt="{{ book['Judul'] }}" onerror=`this.onerror=null; this.src='{{ url_for("static", filename="img/placeholder.jpg") }}';`>
+                                            {% else %}
+                                                <img src="{{ url_for('static', filename='img/placeholder.jpg') }}" alt="Gambar Tidak Tersedia">
+                                            {% endif %}
+                                        </div>
+                                        <div class="card-content">
+                                            <p class="author">{{ book['Penulis'] }}</p>
+                                            <h4 class="title">{{ book['Judul'] }}</h4>
+                                            {% if book['Harga'] %}<p class="price">{{ book['Harga'] }}</p>{% endif %}
+                                        </div>
+                                    </a>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+
+            </section>
+        </div>
+    </main>
+
+<footer class="footer" id="contact">
+    <div class="footer-top">
+        <div class="footer-logo">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Bookara" />
+        </div>
+        <div class="footer-tagline">
+            Search Smarter. Read Better.
+        </div>
+    </div>
+
+    <div class="footer-container">
+        <div class="footer-column">
+            <h3>Company</h3>
+            <a href="#">Home</a>
+            <a href="#">About Us</a>
+            <a href="#">Kategori</a>
+            <a href="#">Contact</a>
+        </div>
+
+        <div class="footer-column">
+            <h3>Support</h3>
+            <a href="#">Help Center</a>
+            <a href="#">How It Works</a>
+            <a href="#">Report an Issue</a>
+        </div>
+
+        <div class="footer-column">
+            <h3>Legal</h3>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Cookie Policy</a>
+            <a href="#">Content Guidelines</a>
+        </div>
+
+        <div class="footer-column">
+            <h3>Contact Information</h3>
+            <a href="#">Email Support</a>
+            <a href="#">Business Inquiries</a>
+
+            <p style="margin-top:10px; font-weight:600">Social Media Links:</p>
+            <div class="social-icons">
+                <i class="fab fa-instagram"></i>
+                <i class="fab fa-x-twitter"></i>
+                <i class="fab fa-facebook"></i>
+                <i class="fab fa-linkedin"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-bottom">
+        © 2025 Bookora. All rights reserved.
+    </div>
+</footer>
+<script>
+    // --- LOGIKA KEEP OPEN SIDEBAR ---
+const activeLink = document.querySelector('.active-cat');
+if (activeLink) {
+    // 1. Ubah warna link yang aktif agar terlihat
+    activeLink.style.color = '#6C63FF';
+    activeLink.style.fontWeight = '700';
+
+    // 2. Loop ke atas (parents) untuk membuka semua tag <details>
+    let parent = activeLink.parentElement;
+    while (parent) {
+        if (parent.tagName === 'DETAILS') {
+            parent.setAttribute('open', 'true');
+        }
+        // Stop jika sudah sampai di container sidebar
+        if (parent.classList.contains('filter-category-tree')) {
+            break;
+        }
+        parent = parent.parentElement;
+    }
+}
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- 1. LOGIKA SEARCH HISTORY ---
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
+    const historyDropdown = document.getElementById('search-history-dropdown');
+    const historyList = document.getElementById('history-list');
+    const clearHistoryBtn = document.getElementById('clear-history');
+
+    let searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
+
+    function renderHistory() {
+        historyList.innerHTML = ''; 
+        if (searchHistory.length === 0) {
+            historyList.innerHTML = '<li class="history-empty">Belum ada riwayat pencarian</li>';
+            clearHistoryBtn.style.display = 'none'; 
+            return;
+        }
+        
+        clearHistoryBtn.style.display = 'block'; 
+        searchHistory.forEach((term, index) => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <i class="fas fa-history"></i>
+                <span class="history-term">${term}</span>
+                <button type="button" class="delete-item-btn" data-index="${index}">&times;</button>
+            `;
+            historyList.appendChild(li);
+        });
+    }
+
+    if(searchInput) {
+        searchInput.addEventListener('focus', () => {
+            renderHistory(); 
+            historyDropdown.style.display = 'block';
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-bar-container')) {
+            if(historyDropdown) historyDropdown.style.display = 'none';
+        }
+    });
+
+    if(searchForm) {
+        searchForm.addEventListener('submit', (e) => {
+            const searchTerm = searchInput.value.trim();
+            if (searchTerm) {
+                if (searchHistory.includes(searchTerm)) {
+                    searchHistory = searchHistory.filter(t => t !== searchTerm);
+                }
+                searchHistory.unshift(searchTerm);
+                searchHistory = searchHistory.slice(0, 5); 
+                localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+            }
+        });
+    }
+
+    if(clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', () => {
+            searchHistory = [];
+            localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+            renderHistory();
+        });
+    }
+
+    if(historyList) {
+        historyList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-item-btn')) {
+                e.stopPropagation(); 
+                const index = e.target.getAttribute('data-index');
+                searchHistory.splice(index, 1); 
+                localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+                renderHistory();
+            }
+            
+            if (e.target.classList.contains('history-term')) {
+                searchInput.value = e.target.textContent;
+                searchForm.submit();
+            }
+        });
+    }
+
+    // --- 2. LOGIKA LAZY LOADING ---
+    let offset = 20; 
+    const limit = 20;
+    let isLoading = false;
+    let hasMore = true; 
+
+    const container = document.getElementById('books-container');
+    const loader = document.getElementById('loading-indicator');
+    const trigger = document.getElementById('scroll-trigger');
+
+    // Cek apakah elemen trigger ada (hanya ada di mode list/search, bukan di grouped shelf)
+    if (trigger && container) {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        async function loadMoreBooks() {
+            if (isLoading || !hasMore) return;
+            
+            isLoading = true;
+            if(loader) loader.style.display = 'block';
+
+            urlParams.set('offset', offset);
+            
+            try {
+                const response = await fetch(`/api/load-more?${urlParams.toString()}`);
+                const newBooks = await response.json();
+
+                if (newBooks.length === 0) {
+                    hasMore = false;
+                    if(loader) loader.innerHTML = "<p style='font-size:0.9em;'>Semua buku sudah ditampilkan.</p>";
+                    return; 
+                }
+
+                newBooks.forEach(book => {
+                    const card = document.createElement('div');
+                    card.className = 'book-card-small';
+                    
+                    let imgSrc = book.Gambar;
+                    let imgHtml = '';
+                    
+                    if (imgSrc && imgSrc !== 'Tidak ditemukan' && imgSrc.length > 5) {
+                        // PENTING: Escape tanda kutip di sini
+                        imgHtml = `<img src="${imgSrc}" alt="${book.Judul}" onerror="this.onerror=null; this.src='/static/img/placeholder.jpg';">`;
+                    } else {
+                        imgHtml = `<img src="/static/img/placeholder.jpg" alt="Gambar Tidak Tersedia">`;
+                    }
+
+                    card.innerHTML = `
+                        <a href="/book/${book.id}" class="card-link">
+                            <div class="card-image">
+                                ${imgHtml}
+                            </div>
+                            <div class="card-content">
+                                <p class="author">${book.Penulis || ''}</p>
+                                <h5 class="title">${book.Judul}</h5>
+                                ${book.Harga ? `<p class="price">${book.Harga}</p>` : ''}
+                            </div>
+                        </a>
+                    `;
+                    container.appendChild(card);
+                });
+
+                offset += limit; 
+
+            } catch (error) {
+                console.error('Gagal memuat buku:', error);
+            } finally {
+                isLoading = false;
+                if(hasMore && loader) loader.style.display = 'none';
+            }
+        }
+
+        const observer = new IntersectionObserver(entries => {
+            if (entries[0].isIntersecting) {
+                loadMoreBooks();
+            }
+        }, { rootMargin: '200px' }); 
+
+        observer.observe(trigger);
+    }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- LOGIKA TOMBOL HAPUS (X) ---
+    const searchInput = document.getElementById('search-input');
+    const clearBtn = document.getElementById('clear-search-btn');
+
+    // Fungsi untuk menampilkan/sembunyikan tombol
+    function toggleClearButton() {
+        if (searchInput.value.trim().length > 0) {
+            clearBtn.style.display = 'block';
+        } else {
+            clearBtn.style.display = 'none';
+        }
+    }
+
+    if (searchInput && clearBtn) {
+        // 1. Cek saat halaman baru dimuat (penting jika ada search query dari server)
+        toggleClearButton();
+
+        // 2. Cek setiap kali user mengetik
+        searchInput.addEventListener('input', toggleClearButton);
+
+        // 3. Aksi saat tombol X diklik
+        clearBtn.addEventListener('click', function(e) {
+            e.preventDefault(); // Mencegah form submit tidak sengaja
+            searchInput.value = ''; // Kosongkan input
+            toggleClearButton();    // Sembunyikan tombol
+            searchInput.focus();    // Kembalikan kursor ke input
+            
+            // Opsi: Jika ingin langsung reload halaman bersih (tanpa search), uncomment baris bawah:
+            // window.location.href = window.location.pathname; 
+        });
+    }
+
+});
+</script>
+<script>
+    // Fungsi ini HARUS berada di luar document.addEventListener
+    // agar bisa dipanggil langsung oleh onclick="" dan onchange="" di HTML
+    function showLoader() {
+        const loader = document.getElementById('global-loader');
+        if (loader) {
+            loader.style.display = 'flex'; // Paksa tampil
+        }
+    }
+
+    // Sembunyikan loader saat user menekan tombol Back di browser
+    window.addEventListener("pageshow", function(event) {
+        const loader = document.getElementById('global-loader');
+        if (event.persisted && loader) {
+            loader.style.display = "none";
+        }
+    });
+</script>
+<script>
+    // --- FUNGSI UNTUK MENGHAPUS PARAMETER URL (HAPUS FILTER SATUAN) ---
+    function removeParam(key) {
+        // 1. Ambil URL saat ini
+        const url = new URL(window.location.href);
+        
+        // 2. Hapus parameter spesifik (misal: 'lang', 'filter', atau 'page_range')
+        url.searchParams.delete(key);
+        
+        // 3. Reset pagination ke halaman 1 jika filter berubah (opsional, good practice)
+        if (url.searchParams.has('offset')) {
+            url.searchParams.delete('offset');
+        }
+
+        // 4. Tampilkan loader dan reload halaman dengan URL baru
+        if (typeof showLoader === 'function') showLoader();
+        window.location.href = url.toString();
+    }
+
+    // --- FUNGSI HAPUS SEMUA FILTER (RESET KE HOME) ---
+    function clearAllFilters() {
+        if (typeof showLoader === 'function') showLoader();
+        // Redirect ke root (/) atau hapus semua query params
+        window.location.href = '/';
+    }
+</script>
+</body>
+</html>

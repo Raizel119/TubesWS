@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
     <style>
+        /* Animasi Sticky Navbar Search */
         #navbar-search-section {
             transition: opacity 0.3s ease, transform 0.3s ease;
             opacity: 0;
@@ -28,10 +29,28 @@
             pointer-events: auto;
             transform: translateY(0);
         }
-        #navbar-search-section .search-bar {
-            max-width: 500px;
-            padding: 8px 15px;
-            margin: 0 20px;
+        
+        /* Style Tambahan untuk Tombol Load More */
+        #load-more-container {
+            text-align: center;
+            margin: 30px 0 50px 0;
+            display: none; 
+        }
+        .btn-load-more {
+            background-color: transparent;
+            border: 1px solid #A695FF;
+            color: #A695FF;
+            padding: 10px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+        .btn-load-more:hover {
+            background-color: #A695FF;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(166, 149, 255, 0.3);
         }
     </style>
 </head>
@@ -63,10 +82,15 @@
             <div id="navbar-search-section">
                 <form action="/" method="GET" class="search-bar" id="navbar-search-form">
                     <span class="material-symbols-outlined" style="font-size: 20px;">search</span>
-                    <input type="text" name="query" value="{{ search_query or '' }}" placeholder="Cari Judul Buku..." autocomplete="off">
+                    <input type="text" name="query" value="{{ search_query or '' }}" placeholder="Cari..." autocomplete="off">
                     <input type="hidden" name="filter" value="{{ current_filter or '' }}">
                     <input type="hidden" name="lang" value="{{ current_lang or 'all' }}">
+                    <input type="hidden" name="sort" value="{{ sort_option or 'price_asc' }}">
                 </form>
+                
+                <button type="button" id="navbar-filter-btn" class="navbar-filter-btn" title="Filter & Urutkan">
+                    <i class="fas fa-sliders-h"></i>
+                </button>
             </div>
 
             <nav class="navbar-right">
@@ -78,7 +102,7 @@
     </header>
 
     <main>
-        {% if not current_filter and not search_query and current_lang == 'all' and page_range == 'all' and not request.args.get('sort_price') %}
+        {% if not current_filter and not search_query and current_lang == 'all' and page_range == 'all' and (not sort_option or sort_option == 'price_asc') %}
         <section class="hero-carousel">
             <div class="carousel-slider">
                 <div class="slide" id="slide-1"> 
@@ -114,7 +138,8 @@
                         {% for cat, sub1_map in nested_category_map.items() %}
                         <li>
                             <div class="cat-item">
-                                <a href="/?filter=cat_{{ cat | uquote }}" class="{{ 'active' if current_filter == 'cat_' ~ cat else '' }}">
+                                <a href="/?filter=cat_{{ cat | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                   class="{{ 'active' if current_filter == 'cat_' ~ cat else '' }}" onclick="showLoader()">
                                     {{ cat }}
                                 </a>
                                 {% if sub1_map %}
@@ -127,7 +152,8 @@
                                 {% for sub1, sub2_map in sub1_map.items() %}
                                 <li>
                                     <div class="cat-item">
-                                        <a href="/?filter=sub_{{ sub1 | uquote }}" class="{{ 'active' if current_filter == 'sub_' ~ sub1 else '' }}">
+                                        <a href="/?filter=sub_{{ sub1 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                           class="{{ 'active' if current_filter == 'sub_' ~ sub1 else '' }}" onclick="showLoader()">
                                             {{ sub1 }}
                                         </a>
                                         {% if sub2_map %}
@@ -140,7 +166,8 @@
                                         {% for sub2, sub3_list in sub2_map.items() %}
                                         <li>
                                             <div class="cat-item">
-                                                <a href="/?filter=subsub_{{ sub2 | uquote }}" class="{{ 'active' if current_filter == 'subsub_' ~ sub2 else '' }}">
+                                                <a href="/?filter=subsub_{{ sub2 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                                   class="{{ 'active' if current_filter == 'subsub_' ~ sub2 else '' }}" onclick="showLoader()">
                                                     {{ sub2 }}
                                                 </a>
                                                 {% if sub3_list %}
@@ -152,7 +179,8 @@
                                             <ul class="submenu">
                                                 {% for sub3 in sub3_list %}
                                                 <li>
-                                                    <a href="/?filter=sub3_{{ sub3 | uquote }}" class="leaf-link {{ 'active' if current_filter == 'sub3_' ~ sub3 else '' }}">
+                                                    <a href="/?filter=sub3_{{ sub3 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                                       class="leaf-link {{ 'active' if current_filter == 'sub3_' ~ sub3 else '' }}" onclick="showLoader()">
                                                         - {{ sub3 }}
                                                     </a>
                                                 </li>
@@ -171,50 +199,6 @@
                         {% endfor %}
                     </ul>
                 </div>
-                
-                <form action="/" method="GET" style="margin-top: 20px; padding: 0 15px;">
-                    <input type="hidden" name="filter" value="{{ current_filter }}">
-                    <input type="hidden" name="query" value="{{ search_query }}">
-                    <input type="hidden" name="sort_price" value="{{ selected_sort_price }}">
-
-                    <details class="filter-group" open style="border-bottom: 1px solid #eee; margin-bottom: 10px;">
-                        <summary class="filter-group-title" style="cursor: pointer; padding: 10px 0; font-weight: 700;">Bahasa</summary>
-                        <div class="filter-options-list" style="padding-bottom: 10px;">
-                            <label class="radio-item">
-                                <input type="radio" name="lang" value="all" {% if current_lang == 'all' %}checked{% endif %} onchange="this.form.submit()">
-                                <span>Semua Bahasa</span>
-                            </label>
-                            {% for lang in all_languages %}
-                            <label class="radio-item">
-                                <input type="radio" name="lang" value="{{ lang }}" {% if current_lang == lang %}checked{% endif %} onchange="this.form.submit()">
-                                <span>{{ lang }}</span>
-                            </label>
-                            {% endfor %}
-                        </div>
-                    </details>
-
-                    <details class="filter-group" open style="border-bottom: 1px solid #eee;">
-                        <summary class="filter-group-title" style="cursor: pointer; padding: 10px 0; font-weight: 700;">Halaman</summary>
-                        <div class="filter-options-list" style="padding-bottom: 10px;">
-                            <label class="radio-item">
-                                <input type="radio" name="page_range" value="all" {% if page_range == 'all' %}checked{% endif %} onchange="this.form.submit()">
-                                <span>Semua</span>
-                            </label>
-                            <label class="radio-item">
-                                <input type="radio" name="page_range" value="0-100" {% if page_range == '0-100' %}checked{% endif %} onchange="this.form.submit()">
-                                <span>0 - 100</span>
-                            </label>
-                            <label class="radio-item">
-                                <input type="radio" name="page_range" value="100-200" {% if page_range == '100-200' %}checked{% endif %} onchange="this.form.submit()">
-                                <span>100 - 200</span>
-                            </label>
-                            <label class="radio-item">
-                                <input type="radio" name="page_range" value="200+" {% if page_range == '200+' %}checked{% endif %} onchange="this.form.submit()">
-                                <span>> 200</span>
-                            </label>
-                        </div>
-                    </details>
-                </form>
             </aside>
 
             <section class="home-content">
@@ -226,8 +210,8 @@
                             <form action="/" method="GET" class="search-bar" id="search-form" style="display: flex; align-items: center; background: #fff; border: 1px solid #e5e5e5; border-radius: 50px; padding: 12px 20px; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.03); position: relative;">
                                 <input type="hidden" name="filter" value="{{ current_filter or '' }}">
                                 <input type="hidden" name="lang" value="{{ current_lang or 'all' }}">
-                                <input type="hidden" name="sort_price" value="{{ selected_sort_price or '' }}">
                                 <input type="hidden" name="page_range" value="{{ page_range or 'all' }}">
+                                <input type="hidden" name="sort" value="{{ sort_option or 'price_asc' }}">
                                 
                                 <span class="material-symbols-outlined" style="font-size: 22px; color: #888; flex-shrink: 0;">search</span>
                                 <input type="text" name="query" id="search-input" placeholder="Cari Judul Buku atau Penulis" value="{{ search_query or '' }}" autocomplete="off" style="flex-grow: 1; border: none; outline: none; font-size: 1em; margin-left: 10px; background: transparent; padding-right: 30px;">
@@ -246,26 +230,14 @@
                             </div>
                         </div>
 
-                        <div class="dropdown" id="urutkan" style="position: relative;">
-                            <a href="#" class="nav-link dropdown-toggle" style="display: flex; align-items: center; gap: 10px; border: 1px solid #E0E0E0; border-radius: 12px; padding: 10px 20px; background-color: #FFFFFF; min-width: 180px; justify-content: space-between; text-decoration: none;">
-                                <span class="filter-label" style="font-size: 0.9em; color: #6C757D;">Urutkan</span>
-                                <span style="font-weight: 600; color: #1E1E1E; font-size: 0.95em;">
-                                    {% if selected_sort_price == 'asc' %}Harga Terendah
-                                    {% elif selected_sort_price == 'desc' %}Harga Tertinggi
-                                    {% else %}Harga Terendah
-                                    {% endif %}
-                                </span>
-                                <span class="arrow-down" style="border: solid #1E1E1E; border-width: 0 2px 2px 0; display: inline-block; padding: 3px; transform: rotate(45deg);"></span> 
-                            </a>
-                            <div class="dropdown-content">
-                                <a href="/?sort_price=asc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}" onclick="showLoader()">Harga Terendah</a>
-                                <a href="/?sort_price=desc&query={{ search_query or '' }}&filter={{ current_filter or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}" onclick="showLoader()">Harga Tertinggi</a>
-                            </div>
-                        </div>
+                        <button type="button" id="open-filter-btn" class="btn-filter-trigger">
+                            <i class="fas fa-sliders-h"></i> Filter & Urutkan
+                        </button>
+
                     </div>
                 </div>
 
-                {% if current_filter or search_query or current_lang != 'all' or selected_sort_price or page_range != 'all' %}
+                {% if current_filter or search_query or current_lang != 'all' or (sort_option and sort_option != 'price_asc') or page_range != 'all' %}
                     
                     <div class="results-header-count">
                         Menampilkan <strong>{{ results_count }}</strong> dari <strong>{{ total_count }}</strong> produk
@@ -278,11 +250,18 @@
                             <i class="fas fa-times"></i>
                         </button>
                         {% for filter in active_filters %}
-                            <div class="filter-pill" onclick="removeParam('{{ filter.key }}')">
-                                <i class="fas fa-tag icon-tag"></i>
-                                <span>{{ filter.value }}</span>
-                                <span class="remove-single"><i class="fas fa-times"></i></span>
-                            </div>
+                            {% if filter.key == 'sort' %}
+                                <div class="filter-pill" style="cursor:default; background-color:#f0f0f0;">
+                                    <i class="fas fa-sort icon-tag"></i>
+                                    <span>{{ filter.value }}</span>
+                                </div>
+                            {% else %}
+                                <div class="filter-pill" onclick="removeParam('{{ filter.key }}')">
+                                    <i class="fas fa-tag icon-tag"></i>
+                                    <span>{{ filter.value }}</span>
+                                    <span class="remove-single"><i class="fas fa-times"></i></span>
+                                </div>
+                            {% endif %}
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -315,12 +294,14 @@
                     </div>
 
                     <div id="loading-indicator" style="text-align: center; padding: 20px; display: none; color: #666;">
-                        <i class="fas fa-spinner fa-spin"></i> Memuat lebih banyak buku...
+                        <i class="fas fa-spinner fa-spin"></i> Memuat...
                     </div>
-                    <div id="scroll-trigger" style="height: 20px; margin-bottom: 20px;"></div>
+                    
+                    <div id="load-more-container">
+                        <button id="load-more-btn" class="btn-load-more">Muat Lebih Banyak</button>
+                    </div>
 
                 {% else %}
-                    
                     {% for category, books in grouped_books.items() %}
                         {% if books %}
                         <div class="category-shelf">
@@ -401,6 +382,84 @@
         </div>
     </footer>
 
+    <div id="filter-modal" class="filter-modal">
+        <div class="filter-modal-content">
+            <form action="/" method="GET" id="modal-filter-form">
+                <div class="filter-modal-header">
+                    <h3>Filter & Urutkan</h3>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <input type="hidden" name="query" value="{{ search_query or '' }}">
+                <input type="hidden" name="filter" value="{{ current_filter or '' }}">
+
+                <div class="filter-modal-body">
+                    <div class="filter-group-modal">
+                        <h4>Urutkan</h4>
+                        <div class="radio-list">
+                            <label class="modal-radio full-width">
+                                <input type="radio" name="sort" value="price_asc" {% if not sort_option or sort_option == 'price_asc' %}checked{% endif %}>
+                                <span>Harga Terendah</span>
+                            </label>
+                            <label class="modal-radio full-width">
+                                <input type="radio" name="sort" value="price_desc" {% if sort_option == 'price_desc' %}checked{% endif %}>
+                                <span>Harga Tertinggi</span>
+                            </label>
+                            <label class="modal-radio full-width">
+                                <input type="radio" name="sort" value="date_newest" {% if sort_option == 'date_newest' %}checked{% endif %}>
+                                <span>Terbaru (Tahun Terbit)</span>
+                            </label>
+                            <label class="modal-radio full-width">
+                                <input type="radio" name="sort" value="date_oldest" {% if sort_option == 'date_oldest' %}checked{% endif %}>
+                                <span>Terlama (Tahun Terbit)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="filter-group-modal">
+                        <h4>Bahasa</h4>
+                        <div class="radio-grid">
+                            <label class="modal-radio">
+                                <input type="radio" name="lang" value="all" {% if current_lang == 'all' %}checked{% endif %}>
+                                <span>Semua</span>
+                            </label>
+                            {% for lang in all_languages %}
+                            <label class="modal-radio">
+                                <input type="radio" name="lang" value="{{ lang }}" {% if current_lang == lang %}checked{% endif %}>
+                                <span>{{ lang }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="filter-group-modal">
+                        <h4>Jumlah Halaman</h4>
+                        <div class="radio-list">
+                            <label class="modal-radio full-width">
+                                <input type="radio" name="page_range" value="all" {% if page_range == 'all' %}checked{% endif %}>
+                                <span>Semua Halaman</span>
+                            </label>
+                            <label class="modal-radio full-width">
+                                <input type="radio" name="page_range" value="0-100" {% if page_range == '0-100' %}checked{% endif %}>
+                                <span>< 100 Halaman</span>
+                            </label>
+                            <label class="modal-radio full-width">
+                                <input type="radio" name="page_range" value="100-200" {% if page_range == '100-200' %}checked{% endif %}>
+                                <span>100 - 200 Halaman</span>
+                            </label>
+                            <label class="modal-radio full-width">
+                                <input type="radio" name="page_range" value="200+" {% if page_range == '200+' %}checked{% endif %}>
+                                <span>> 200 Halaman</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-modal-footer">
+                    <button type="button" class="btn-reset" onclick="resetModalFilters()">Reset</button>
+                    <button type="submit" class="btn-apply" onclick="showLoader()">Terapkan Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function toggleMenu(element) {
             const parentDiv = element.closest('.cat-item');
@@ -432,6 +491,30 @@
                 }
             }
         });
+    </script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById("filter-modal");
+        const btnMain = document.getElementById("open-filter-btn");
+        const btnNav = document.getElementById("navbar-filter-btn");
+        const span = document.getElementsByClassName("close-modal")[0];
+
+        function openModal() { modal.style.display = "flex"; }
+
+        if (btnMain) btnMain.onclick = openModal;
+        if (btnNav) btnNav.onclick = openModal;
+        if (span) span.onclick = function() { modal.style.display = "none"; };
+
+        window.onclick = function(event) { if (event.target == modal) modal.style.display = "none"; }
+    });
+
+    function resetModalFilters() {
+        const form = document.getElementById('modal-filter-form');
+        form.querySelectorAll('input[name="sort"]').forEach(r => r.checked = (r.value === "price_asc"));
+        form.querySelectorAll('input[name="lang"]').forEach(r => r.checked = (r.value === "all"));
+        form.querySelectorAll('input[name="page_range"]').forEach(r => r.checked = (r.value === "all"));
+    }
     </script>
 
     <script>
@@ -495,36 +578,65 @@
             });
         }
 
-        // INFINITE SCROLL
+        // LOAD MORE BUTTON LOGIC
         let offset = 20; const limit = 20; let isLoading = false; let hasMore = true; 
         const container = document.getElementById('books-container');
         const loader = document.getElementById('loading-indicator');
-        const trigger = document.getElementById('scroll-trigger');
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        const loadMoreContainer = document.getElementById('load-more-container');
 
-        if (trigger && container) {
+        if (loadMoreContainer && container) {
+            loadMoreContainer.style.display = 'block';
+
             const urlParams = new URLSearchParams(window.location.search);
+            
             async function loadMoreBooks() {
                 if (isLoading || !hasMore) return;
-                isLoading = true; if(loader) loader.style.display = 'block';
+                isLoading = true; 
+                if(loader) loader.style.display = 'block';
+                if(loadMoreBtn) loadMoreBtn.style.display = 'none'; 
+
                 urlParams.set('offset', offset);
                 try {
                     const response = await fetch(`/api/load-more?${urlParams.toString()}`);
                     const newBooks = await response.json();
-                    if (newBooks.length === 0) { hasMore = false; if(loader) loader.style.display = 'none'; return; }
+                    
+                    if (newBooks.length === 0) { 
+                        hasMore = false; 
+                        if(loader) loader.style.display = 'none';
+                        if(loadMoreContainer) loadMoreContainer.style.display = 'none';
+                        return; 
+                    }
+
                     newBooks.forEach(book => {
                         const card = document.createElement('div'); card.className = 'book-card-small';
                         let imgHtml = (book.Gambar && book.Gambar !== 'Tidak ditemukan' && book.Gambar.length > 5) ? `<img src="${book.Gambar}" alt="${book.Judul}" onerror="this.onerror=null; this.src='/static/img/placeholder.jpg';">` : `<img src="/static/img/placeholder.jpg" alt="Gambar Tidak Tersedia">`;
                         card.innerHTML = `<a href="/book/${book.id}" class="card-link"><div class="card-image">${imgHtml}</div><div class="card-content"><p class="author">${book.Penulis || ''}</p><h5 class="title">${book.Judul}</h5>${book.Harga ? `<p class="price" style="font-weight:700; font-size:0.9em; color:#A695FF;">${book.Harga}</p>` : ''}</div></a>`;
                         container.appendChild(card);
                     });
+                    
                     offset += limit; 
-                } catch (error) { console.error('Gagal memuat:', error); } finally { isLoading = false; if(hasMore && loader) loader.style.display = 'none'; }
+                    
+                    if (newBooks.length < limit) {
+                        hasMore = false;
+                        if(loadMoreContainer) loadMoreContainer.style.display = 'none';
+                    }
+
+                } catch (error) { 
+                    console.error('Gagal memuat:', error); 
+                } finally { 
+                    isLoading = false; 
+                    if(loader) loader.style.display = 'none';
+                    if(hasMore && loadMoreBtn) loadMoreBtn.style.display = 'inline-block';
+                }
             }
-            const observer = new IntersectionObserver(entries => { if (entries[0].isIntersecting) loadMoreBooks(); }, { rootMargin: '200px' }); 
-            observer.observe(trigger);
+            
+            if(loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', loadMoreBooks);
+            }
         }
 
-        // STICKY NAVBAR
+        // STICKY NAVBAR LOGIC
         const mainSearch = document.getElementById('main-search-section');
         const navSearch = document.getElementById('navbar-search-section');
         if (mainSearch && navSearch) {

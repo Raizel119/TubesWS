@@ -108,6 +108,42 @@ a {
     display: block;
 }
 
+/* --- NAVBAR SEARCH SECTION --- */
+#navbar-search-section {
+    display: flex;
+    align-items: center;
+    gap: 10px; 
+    max-width: 600px;
+    margin: 0 20px;
+}
+#navbar-search-section .search-bar {
+    flex-grow: 1;
+    margin: 0 !important;
+    width: auto !important;
+    padding: 8px 15px;
+}
+/* Tombol Filter di Navbar */
+.navbar-filter-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 50%;
+    color: var(--dark-text);
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.navbar-filter-btn:hover {
+    background-color: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+
 /* ========================================= */
 /* 3. HERO CAROUSEL                          */
 /* ========================================= */
@@ -134,7 +170,6 @@ a {
     background-position: center;
     position: relative;
 }
-/* Overlay gelap */
 .slide::before {
     content: '';
     position: absolute;
@@ -162,7 +197,6 @@ a {
     font-size: 1.1em;
 }
 
-/* Gambar Slide (Sesuaikan path) */
 #slide-1 { background-image: url('/static/img/banner.jpg'); }
 #slide-2 { background-image: url('/static/img/banner1.jpg'); background-color: #e0e0e0; }
 #slide-3 { background-image: url('/static/img/banner2.jpg'); background-color: #d0d0d0; }
@@ -190,13 +224,11 @@ a {
 /* ========================================= */
 .page-layout {
     display: grid;
-    grid-template-columns: 260px 1fr; /* Sedikit diperlebar */
+    grid-template-columns: 260px 1fr;
     gap: 30px;
     padding: 40px 0;
 }
-
-/* Sidebar Container (Support Sticky) */
-.home-sidebar, .filter-sidebar {
+.home-sidebar {
     background-color: var(--white);
     border-radius: 8px;
     height: fit-content;
@@ -208,9 +240,7 @@ a {
     margin-right: 5px;
     border-right: 1px solid var(--border-color);
 }
-
-/* --- JUDUL SIDEBAR --- */
-.filter-title, .sidebar-title {
+.sidebar-title {
     font-size: 1.5em;
     font-weight: 600;
     color: var(--dark-text);
@@ -218,23 +248,11 @@ a {
     padding: 20px 20px 10px 20px;
     border-bottom: 1px solid var(--border-color);
 }
-.filter-subtitle {
-    font-size: 1.1em;
-    font-weight: 700;
-    padding: 0 20px;
-    margin-bottom: 10px;
-    margin-top: 15px;
-    color: var(--dark-text);
-}
 
 /* ========================================= */
-/* 5. SIDEBAR STYLE: LIST (Classic/Nested)   */
+/* 5. SIDEBAR STYLE: LIST (ACCORDION)        */
 /* ========================================= */
-.sidebar-category ul {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
-}
+.sidebar-category ul { list-style: none; padding-left: 0; margin: 0; }
 .cat-item {
     display: flex;
     justify-content: space-between;
@@ -245,20 +263,9 @@ a {
     transition: background-color 0.2s;
 }
 .cat-item:hover { background-color: #f8f9fa; }
-.cat-item a {
-    flex-grow: 1;
-    font-size: 14px;
-    font-weight: 500;
-}
-.cat-item a.active {
-    color: var(--primary-color);
-    font-weight: 700;
-}
-/* Submenu Logic */
-.submenu {
-    display: none; 
-    background-color: #fff;
-}
+.cat-item a { flex-grow: 1; font-size: 14px; font-weight: 500; }
+.cat-item a.active { color: var(--primary-color); font-weight: 700; }
+.submenu { display: none; background-color: #fff; }
 .submenu .cat-item { padding-left: 30px; background-color: #fafafa; }
 .submenu .submenu .cat-item { padding-left: 45px; background-color: #f5f5f5; }
 .leaf-link {
@@ -268,50 +275,12 @@ a {
     color: #666;
     border-bottom: 1px solid #f0f0f0;
 }
-.leaf-link:hover, .leaf-link.active {
-    color: var(--primary-color);
-}
-.toggle-btn {
-    padding: 0 5px;
-    color: #999;
-    transition: transform 0.3s ease;
-}
+.leaf-link:hover, .leaf-link.active { color: var(--primary-color); }
+.toggle-btn { padding: 0 5px; color: #999; transition: transform 0.3s ease; }
 .rotate { transform: rotate(180deg); }
 
-
 /* ========================================= */
-/* 6. FILTER (RADIO & CHECKBOX)              */
-/* ========================================= */
-.filter-section {
-    margin-top: 25px;
-    border-top: 1px solid #eee;
-    padding: 15px 20px;
-}
-/* Gaya Radio Button Baru */
-.radio-item, .filter-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    color: var(--dark-text);
-    padding: 5px 0;
-}
-.radio-item:hover, .filter-item:hover {
-    background-color: var(--light-bg);
-    border-radius: 4px;
-}
-.radio-item input, .filter-item input[type="radio"] {
-    accent-color: var(--primary-color);
-    margin-right: 5px;
-}
-.filter-item input[type="radio"]:checked + span {
-    font-weight: 700;
-}
-
-/* ========================================= */
-/* 7. SEARCH, SORT & HISTORY                 */
+/* 6. SEARCH & FILTER SECTION (MAIN)         */
 /* ========================================= */
 .search-sort-container {
     display: flex;
@@ -382,7 +351,150 @@ a {
 .history-list li:hover { background-color: var(--light-bg); }
 
 /* ========================================= */
-/* 8. ACTIVE FILTERS (PILLS STYLE)           */
+/* 7. NEW FILTER BUTTON & MODAL STYLES      */
+/* ========================================= */
+
+/* Tombol Filter Trigger (Main Content) */
+.btn-filter-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background-color: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    padding: 10px 25px;
+    font-family: 'Poppins', sans-serif;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--dark-text);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+}
+.btn-filter-trigger:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: #f9f9ff;
+}
+
+/* Modal Overlay */
+.filter-modal {
+    display: none; 
+    position: fixed; 
+    z-index: 2000; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    background-color: rgba(0,0,0,0.5); 
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
+/* Modal Content Box (FIXED SCROLL) */
+.filter-modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    
+    /* PENTING: Batasi tinggi modal */
+    max-height: 85vh; 
+    height: 85vh; /* Paksa tinggi agar flex bekerja maksimal di layar besar */
+    
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Hindari scroll double */
+    animation: modalSlideIn 0.3s ease;
+}
+
+/* PENTING: Form harus jadi Flex Container agar anak-anaknya bisa diatur */
+#modal-filter-form {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Isi penuh modal content */
+    min-height: 0; /* Fix untuk Firefox */
+}
+
+@keyframes modalSlideIn {
+    from {transform: translateY(20px); opacity: 0;}
+    to {transform: translateY(0); opacity: 1;}
+}
+
+/* Header (Tetap di atas) */
+.filter-modal-header {
+    padding: 20px 25px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0; /* Jangan mengecil */
+}
+.filter-modal-header h3 { margin: 0; font-size: 1.2em; font-weight: 700; }
+.close-modal { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1; }
+.close-modal:hover { color: #000; }
+
+/* Body (Bisa di-scroll) */
+.filter-modal-body {
+    padding: 25px;
+    
+    /* PENTING: Ini kuncinya agar scroll muncul */
+    flex: 1; 
+    overflow-y: auto; 
+    min-height: 0;
+}
+
+.filter-group-modal { margin-bottom: 25px; }
+.filter-group-modal:last-child { margin-bottom: 0; }
+.filter-group-modal h4 { margin-bottom: 12px; font-size: 1em; color: #666; font-weight: 500; }
+
+/* Radio Button Styling */
+.radio-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.radio-list { display: flex; flex-direction: column; gap: 10px; }
+.modal-radio { position: relative; cursor: pointer; }
+.modal-radio input { display: none; }
+.modal-radio span {
+    display: block;
+    text-align: center;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 0.9em;
+    transition: 0.2s;
+    color: #333;
+}
+.modal-radio.full-width span { text-align: left; padding-left: 15px; }
+
+/* Checked State */
+.modal-radio input:checked + span {
+    background-color: rgba(166, 149, 255, 0.1); 
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+.modal-radio:hover span { border-color: #bbb; }
+
+/* Footer Buttons (Tetap di bawah) */
+.filter-modal-footer {
+    padding: 20px 25px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 15px;
+    background-color: #fff;
+    flex-shrink: 0; /* Jangan mengecil */
+}
+.btn-reset { flex: 1; padding: 12px; border: 1px solid #ddd; background: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit; }
+.btn-apply { flex: 2; padding: 12px; border: none; background: var(--primary-color); color: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; font-family: inherit; }
+.btn-reset:hover { background-color: #f5f5f5; }
+.btn-apply:hover { background-color: #8a7de0; }
+
+
+/* ========================================= */
+/* 8. ACTIVE FILTERS (PILLS)                 */
 /* ========================================= */
 .active-filters-container {
     display: flex;
@@ -392,8 +504,6 @@ a {
     padding: 0 20px;
     margin-bottom: 20px;
 }
-
-/* Gaya Pill Modern */
 .filter-pill {
     display: inline-flex;
     align-items: center;
@@ -456,44 +566,13 @@ a {
 /* ========================================= */
 /* 9. CONTENT GRID & BOOK CARDS              */
 /* ========================================= */
-.home-content, .results-content {
-    min-width: 0;
-    padding: 0;
-    border-radius: 8px;
-}
+.home-content, .results-content { min-width: 0; padding: 0; border-radius: 8px; }
 .category-shelf { margin-bottom: 40px; }
-.shelf-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-left: 20px;
-}
+.shelf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-left: 20px; }
 .see-more { color: var(--primary-color); font-weight: 500; padding-right: 20px; }
-
-/* Horizontal Scroll List */
-.book-list-horizontal {
-    display: flex;
-    gap: 15px;
-    overflow-x: auto;
-    padding: 0 20px 15px 20px;
-}
-
-/* Grid Result */
-.results-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
-    padding: 0 20px 15px 20px;
-}
-.no-results {
-    grid-column: 1 / -1;
-    text-align: center;
-    padding: 40px;
-    color: var(--light-text);
-}
-
-/* Card Style */
+.book-list-horizontal { display: flex; gap: 15px; overflow-x: auto; padding: 0 20px 15px 20px; }
+.results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; padding: 0 20px 15px 20px; }
+.no-results { grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--light-text); }
 .book-card-small {
     flex: 0 0 150px;
     border: 1px solid var(--border-color);
@@ -538,13 +617,7 @@ a {
     background-color: var(--white);
     border-top: 1px solid var(--border-color);
 }
-.footer-logo {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 1.8em;
-    font-weight: 700;
-}
+.footer-logo { display: flex; align-items: center; gap: 8px; font-size: 1.8em; font-weight: 700; }
 .footer-logo img { height: 35px; width: auto; }
 .footer-container {
     background: #e8e0ff;
@@ -556,21 +629,10 @@ a {
     margin: auto;
 }
 .footer-column h3 { font-size: 18px; font-weight: 700; margin-bottom: 15px; }
-.footer-column a {
-    display: block;
-    margin-bottom: 8px;
-    color: #000;
-    font-size: 15px;
-}
+.footer-column a { display: block; margin-bottom: 8px; color: #000; font-size: 15px; }
 .footer-column a:hover { opacity: 0.6; }
 .social-icons { display: flex; gap: 12px; margin-top: 10px; }
-.footer-bottom {
-    text-align: center;
-    padding: 20px 0;
-    color: #555;
-    font-size: 14px;
-    background-color: var(--white);
-}
+.footer-bottom { text-align: center; padding: 20px 0; color: #555; font-size: 14px; background-color: var(--white); }
 
 /* ========================================= */
 /* 11. LOADER & RESPONSIVE                   */
@@ -598,11 +660,8 @@ a {
     .footer-container { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 768px) {
-    .page-layout {
-        grid-template-columns: 1fr; 
-        padding: 20px 0;
-    }
-    .home-sidebar, .filter-sidebar {
+    .page-layout { grid-template-columns: 1fr; padding: 20px 0; }
+    .home-sidebar {
         order: 1; 
         position: static;
         height: auto;
@@ -615,4 +674,9 @@ a {
     .footer-top, .footer-container { flex-direction: column; grid-template-columns: 1fr; text-align: center; }
     .footer-links { text-align: center; }
     .social-icons { justify-content: center; }
+}
+@media (max-width: 480px) {
+    .radio-grid { grid-template-columns: 1fr 1fr; }
+    .filter-modal-content { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+    #navbar-search-section .search-bar input { width: 100%; }
 }

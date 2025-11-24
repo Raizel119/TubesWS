@@ -233,10 +233,18 @@ def detail(id):
     }
 
     more_books = []
-    if book["Penulis"]:
-        q_author = queries.get_books_by_author_query(book["Penulis"], id)
-        rows_author = run_query(q_author)
-        more_books = [map_book_row(row) for row in rows_author]
+    raw_author = book["Penulis"]
+    
+    if raw_author:
+        # Pecah string berdasarkan koma (,)
+        # Contoh: "Nur Aksin, Anna Yuni" -> ["Nur Aksin", "Anna Yuni"]
+        author_list = [name.strip() for name in raw_author.split(',') if name.strip()]
+        
+        if author_list:
+            # Kirim list penulis ke query baru
+            q_author = queries.get_books_by_author_query(author_list, id)
+            rows_author = run_query(q_author)
+            more_books = [map_book_row(row) for row in rows_author]
 
     all_categories = load_categories()
     nested_category_map = load_nested_map()

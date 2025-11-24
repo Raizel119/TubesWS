@@ -183,23 +183,42 @@ def get_total_count_query(filters_block):
     """
 
 # [PERBAIKAN] QUERY BUKU PENULIS YANG LEBIH FLEKSIBEL
-def get_books_by_author_query(author_name, exclude_id, limit=6):
-    safe_author = author_name.replace('"', '\\"')
+def get_books_by_author_query(author_list, exclude_id, limit=6):
+    # author_list adalah list, contoh: ["Nur Aksin", "Anna Yuni Astuti"]
     
+    filter_parts = []
+    for name in author_list:
+        # Bersihkan nama dan escape tanda kutip
+        safe_name = name.strip().replace('"', '\\"')
+        # Hindari query string kosong atau terlalu pendek
+        if len(safe_name) > 1:
+            # Buat logika: CONTAINS(..., "nama")
+            filter_parts.append(f'CONTAINS(LCASE(STR(?Penulis)), LCASE("{safe_name}"))')
+    
+    # Gabungkan dengan logika OR (||)
+    # Hasil: (CONTAINS(..., "A") || CONTAINS(..., "B"))
+    if filter_parts:
+        or_clause = " || ".join(filter_parts)
+        final_filter = f"FILTER({or_clause})"
+    else:
+        # Fallback jika list kosong, jangan return apa-apa
+        return "SELECT * WHERE { ?s ?p ?o } LIMIT 0"
+
     return f"""
-    SELECT ?id ?Judul ?Penulis ?Harga ?Gambar WHERE {{
+    SELECT DISTINCT ?id ?Judul ?Penulis ?Harga ?Gambar WHERE {{
         ?b rdf:type bu:Buku .
         ?b bu:Penulis ?Penulis .
         ?b bu:Judul ?Judul .
         
-        # LOGIKA BARU: Abaikan Tag Bahasa (STR) & Huruf Besar/Kecil (LCASE)
-        # Gunakan CONTAINS agar lebih aman jika ada spasi ekstra
-        FILTER(CONTAINS(LCASE(STR(?Penulis)), LCASE("{safe_author}")))
+        # Filter Multi-Author Dynamic
+        {final_filter}
         
         OPTIONAL {{ ?b bu:Harga ?Harga . }}
         OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
         
         BIND(STRAFTER(STR(?b), "#") AS ?id)
+        
+        # Exclude buku yang sedang dibuka
         FILTER(?id != "{exclude_id}")
     }}
     LIMIT {limit}

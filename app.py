@@ -232,12 +232,19 @@ def detail(id):
         "id": id
     }
 
+    more_books = []
+    if book["Penulis"]:
+        q_author = queries.get_books_by_author_query(book["Penulis"], id)
+        rows_author = run_query(q_author)
+        more_books = [map_book_row(row) for row in rows_author]
+
     all_categories = load_categories()
     nested_category_map = load_nested_map()
 
     return render_template(
         "detail.html",
         book=book,
+        more_books=more_books,
         all_categories=all_categories,
         nested_category_map=nested_category_map
     )

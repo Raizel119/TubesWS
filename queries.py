@@ -22,6 +22,12 @@ SELECT DISTINCT ?lang WHERE {
 ORDER BY ?lang
 """
 
+GET_ALL_DATES = """
+SELECT DISTINCT ?date WHERE {
+    ?b bu:TanggalTerbit ?date .
+}
+"""
+
 GET_NESTED_MAP = """
 SELECT DISTINCT ?cat ?sub1 ?sub2 ?sub3 WHERE {
     ?b bu:KategoriUtama ?cat .
@@ -119,30 +125,20 @@ def get_book_detail_query(book_id):
     LIMIT 1
     """
 
-# [UPDATE PENTING] Logika Sorting Terpusat
+# 5. Logika Sorting & Main Query
 def get_books_query(filters_block, sort_option, limit=20, offset=0):
     
     order_clause = ""
     
-    # Logika Sorting
     if sort_option == "price_asc":
-        # Urutkan Harga Terendah
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
-    
     elif sort_option == "price_desc":
-        # Urutkan Harga Tertinggi
         order_clause = "ORDER BY DESC(xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', '')))"
-    
     elif sort_option == "date_newest":
-        # Urutkan Tahun Terbaru (DESC)
         order_clause = "ORDER BY DESC(?extractedYear)"
-        
     elif sort_option == "date_oldest":
-        # Urutkan Tahun Terlama (ASC)
         order_clause = "ORDER BY ASC(?extractedYear)"
-    
     else:
-        # Default: Harga Terendah (jika sort_option kosong)
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
 
     return f"""
@@ -159,10 +155,7 @@ def get_books_query(filters_block, sort_option, limit=20, offset=0):
         OPTIONAL {{ ?b bu:Halaman ?Halaman . }}
         OPTIONAL {{ ?b bu:TanggalTerbit ?TanggalTerbit . }}
 
-        # [LOGIKA EKSTRAKSI TAHUN]
-        # Mengambil 4 digit angka dari string TanggalTerbit (misal: "15 Jan 2024" -> 2024)
         BIND(xsd:integer(REPLACE(STR(?TanggalTerbit), ".*([0-9]{4}).*", "$1")) AS ?extractedYear)
-
         BIND(STRAFTER(STR(?b), "#") AS ?id)
 
         {filters_block}
@@ -187,4 +180,27 @@ def get_total_count_query(filters_block):
         
         {filters_block}
     }}
+    """
+
+# [PERBAIKAN] QUERY BUKU PENULIS YANG LEBIH FLEKSIBEL
+def get_books_by_author_query(author_name, exclude_id, limit=6):
+    safe_author = author_name.replace('"', '\\"')
+    
+    return f"""
+    SELECT ?id ?Judul ?Penulis ?Harga ?Gambar WHERE {{
+        ?b rdf:type bu:Buku .
+        ?b bu:Penulis ?Penulis .
+        ?b bu:Judul ?Judul .
+        
+        # LOGIKA BARU: Abaikan Tag Bahasa (STR) & Huruf Besar/Kecil (LCASE)
+        # Gunakan CONTAINS agar lebih aman jika ada spasi ekstra
+        FILTER(CONTAINS(LCASE(STR(?Penulis)), LCASE("{safe_author}")))
+        
+        OPTIONAL {{ ?b bu:Harga ?Harga . }}
+        OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
+        
+        BIND(STRAFTER(STR(?b), "#") AS ?id)
+        FILTER(?id != "{exclude_id}")
+    }}
+    LIMIT {limit}
     """

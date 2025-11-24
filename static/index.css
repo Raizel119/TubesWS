@@ -1,4 +1,6 @@
-/* ======== GLOBAL & FONT ======== */
+/* ========================================= */
+/* 1. GLOBAL, VARIABLES & RESET              */
+/* ========================================= */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -6,9 +8,9 @@
 }
 
 :root {
-    --primary-color: #A695FF; /* WARNA UNGU BARU ANDA */
+    --primary-color: #A695FF; /* Warna Ungu Utama */
     --light-bg: #F9F9FD; 
-    --dark-text: #1E1E1E; /* WARNA HITAM BARU ANDA */
+    --dark-text: #1E1E1E; 
     --light-text: #6C757D;
     --border-color: #E0E0E0;
     --white: #FFFFFF;
@@ -21,7 +23,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    padding-top: 71px; /* Mendorong konten ke bawah navbar fixed */
+    padding-top: 71px; /* Kompensasi Fixed Navbar */
 }
 
 .container {
@@ -35,7 +37,9 @@ a {
     color: inherit;
 }
 
-/* ======== NAVBAR BARU (FIXED) ======== */
+/* ========================================= */
+/* 2. NAVBAR (FIXED)                         */
+/* ========================================= */
 .navbar {
     background-color: var(--white);
     border-bottom: 1px solid var(--border-color);
@@ -51,12 +55,7 @@ a {
     justify-content: space-between;
     align-items: center;
 }
-.navbar-left {
-    display: flex;
-    align-items: center;
-    gap: 30px;
-}
-.navbar-right {
+.navbar-left, .navbar-right {
     display: flex;
     align-items: center;
     gap: 30px;
@@ -80,28 +79,20 @@ a {
 .nav-link:hover, .nav-link.active {
     color: var(--primary-color); 
 }
-.nav-link .arrow {
-    display: inline-block;
-    border: solid var(--dark-text); 
-    border-width: 0 2px 2px 0;
-    padding: 3px;
-    transform: rotate(45deg);
-    margin-left: 5px;
-}
 .dropdown {
     position: relative;
 }
 .dropdown-content {
     display: none;
     position: absolute;
-    top: 100%; /* DIUBAH: Posisikan tepat di bawah */
+    top: 100%;
     left: 0;
     background-color: var(--white);
     min-width: 200px;
     box-shadow: 0 8px 16px rgba(0,0,0,0.1);
     border-radius: 8px;
     z-index: 100;
-    padding-top: 15px; /* BARU: Ini adalah 'jembatan' tak terlihat */
+    padding-top: 15px; /* Jembatan invisible */
 }
 .dropdown-content a {
     display: block;
@@ -117,8 +108,9 @@ a {
     display: block;
 }
 
-/* ======== HERO CAROUSEL ======== */
-/* ======== HERO CAROUSEL ======== */
+/* ========================================= */
+/* 3. HERO CAROUSEL                          */
+/* ========================================= */
 .hero-carousel {
     width: 100%;
     height: 400px;
@@ -138,30 +130,11 @@ a {
     display: flex;
     align-items: center;
     justify-content: center;
-
-    /* BARU: Style untuk background image */
     background-size: cover;
     background-position: center;
-    position: relative; /* Diperlukan untuk overlay */
+    position: relative;
 }
-.slide-content {
-    text-align: center;
-    position: relative; /* BARU: Agar di atas overlay */
-    z-index: 2;
-    color: var(--white); /* BARU: Ubah teks jadi putih */
-}
-.slide-content h1 {
-    font-size: 2.5em;
-    font-weight: 700;
-    margin-bottom: 10px;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.4); /* BARU: Bayangan teks */
-}
-.slide-content p {
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.4); /* BARU: Bayangan teks */
-    font-size: 1.1em;
-}
-
-/* BARU: Overlay gelap agar teks terbaca */
+/* Overlay gelap */
 .slide::before {
     content: '';
     position: absolute;
@@ -169,35 +142,31 @@ a {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.4); /* Overlay 40% hitam */
+    background-color: rgba(0, 0, 0, 0.4);
     z-index: 1;
 }
-
-/* BARU: Tentukan gambar untuk setiap slide */
-#slide-1 {
-    /* Pastikan path ini benar */
-    background-image: url('/static/img/banner.jpg'); 
-}
-#slide-2 {
-    /* Ganti dengan gambar lain jika ada */
-    background-image: url('/static/img/banner1.jpg'); 
-    background-color: #e0e0e0; /* Fallback jika gambar gagal */
-}
-#slide-3 {
-    /* Ganti dengan gambar lain jika ada */
-    background-image: url('/static/img/banner2.jpg'); 
-    background-color: #d0d0d0; /* Fallback jika gambar gagal */
-}
-
-
 .slide-content {
     text-align: center;
+    position: relative;
+    z-index: 2;
+    color: var(--white);
 }
 .slide-content h1 {
     font-size: 2.5em;
     font-weight: 700;
     margin-bottom: 10px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
 }
+.slide-content p {
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+    font-size: 1.1em;
+}
+
+/* Gambar Slide (Sesuaikan path) */
+#slide-1 { background-image: url('/static/img/banner.jpg'); }
+#slide-2 { background-image: url('/static/img/banner1.jpg'); background-color: #e0e0e0; }
+#slide-3 { background-image: url('/static/img/banner2.jpg'); background-color: #d0d0d0; }
+
 .btn-primary {
     display: inline-block;
     background-color: var(--primary-color); 
@@ -207,154 +176,164 @@ a {
     font-weight: 500;
     transition: background-color 0.2s;
 }
-.btn-primary:hover {
-    background-color: #8a7de0; 
-}
+.btn-primary:hover { background-color: #8a7de0; }
+
 @keyframes slide {
-    0% { margin-left: 0; }
-    30% { margin-left: 0; }
-    33.3% { margin-left: -100%; }
-    63.3% { margin-left: -100%; }
-    66.6% { margin-left: -200%; }
-    96.6% { margin-left: -200%; }
+    0%, 30% { margin-left: 0; }
+    33.3%, 63.3% { margin-left: -100%; }
+    66.6%, 96.6% { margin-left: -200%; }
     100% { margin-left: 0; }
 }
 
-
-/* ======== LAYOUT HALAMAN UTAMA (HOMEPAGE) ======== */
+/* ========================================= */
+/* 4. PAGE LAYOUT & SIDEBAR STRUCTURE        */
+/* ========================================= */
 .page-layout {
     display: grid;
-    grid-template-columns: 240px 1fr; 
+    grid-template-columns: 260px 1fr; /* Sedikit diperlebar */
     gap: 30px;
     padding: 40px 0;
 }
 
-/* Sidebar Homepage (dan Search) */
-/* BARU: Style untuk .home-sidebar dan .filter-sidebar agar konsisten */
+/* Sidebar Container (Support Sticky) */
 .home-sidebar, .filter-sidebar {
     background-color: var(--white);
     border-radius: 8px;
     height: fit-content;
-    
-    /* BARU: Ini adalah magic untuk sidebar "FIXED" (sticky) */
     position: sticky;
-    top: 90px; /* 71px navbar + 19px padding (sesuaikan) */
-    height: calc(100vh - 100px); /* Tinggi maks, sisakan ruang */
-    overflow-y: auto; /* Sidebar bisa di-scroll */
-    
-    padding: 0; /* Hapus padding lama */
+    top: 90px;
+    height: calc(100vh - 100px);
+    overflow-y: auto;
+    padding: 0;
+    margin-right: 5px;
+    border-right: 1px solid var(--border-color);
 }
 
-/* Hapus style .sidebar-nav lama */
-.sidebar-nav { display: none; }
-
-
-/* Konten Homepage (Rak Buku) */
-.home-content {
-    min-width: 0; 
-    padding: 0; 
-    border-radius: 8px; 
+/* --- JUDUL SIDEBAR --- */
+.filter-title, .sidebar-title {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--dark-text);
+    margin-bottom: 15px;
+    padding: 20px 20px 10px 20px;
+    border-bottom: 1px solid var(--border-color);
 }
-.category-shelf {
-    margin-bottom: 40px;
+.filter-subtitle {
+    font-size: 1.1em;
+    font-weight: 700;
+    padding: 0 20px;
+    margin-bottom: 10px;
+    margin-top: 15px;
+    color: var(--dark-text);
 }
-.shelf-header {
+
+/* ========================================= */
+/* 5. SIDEBAR STYLE: LIST (Classic/Nested)   */
+/* ========================================= */
+.sidebar-category ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+.cat-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    padding-left: 20px; 
+    padding: 10px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
-.shelf-header h3 {
-    font-size: 1.5em;
-    font-weight: 600;
-}
-.see-more {
-    color: var(--primary-color); 
+.cat-item:hover { background-color: #f8f9fa; }
+.cat-item a {
+    flex-grow: 1;
+    font-size: 14px;
     font-weight: 500;
-    padding-right: 20px; 
 }
-.book-list-horizontal {
-    display: flex;
-    gap: 15px; 
-    overflow-x: auto; 
-    padding: 0 20px 15px 20px; 
+.cat-item a.active {
+    color: var(--primary-color);
+    font-weight: 700;
 }
-.book-card-small {
-    flex: 0 0 150px; 
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--white);
-    transition: box-shadow 0.2s;
+/* Submenu Logic */
+.submenu {
+    display: none; 
+    background-color: #fff;
 }
-.book-card-small:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-.card-link {
+.submenu .cat-item { padding-left: 30px; background-color: #fafafa; }
+.submenu .submenu .cat-item { padding-left: 45px; background-color: #f5f5f5; }
+.leaf-link {
     display: block;
+    padding: 8px 15px 8px 0;
+    font-size: 13px;
+    color: #666;
+    border-bottom: 1px solid #f0f0f0;
 }
-.card-image {
-    width: 80%; 
-    aspect-ratio: 2 / 3;
-    overflow: hidden;
-    border-radius: 8px; 
-    background-color: #f0f0f0;
-    margin: 8px auto; 
+.leaf-link:hover, .leaf-link.active {
+    color: var(--primary-color);
 }
-.card-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.toggle-btn {
+    padding: 0 5px;
+    color: #999;
+    transition: transform 0.3s ease;
 }
-.card-content {
-    padding: 0 8px 8px 8px; 
-    text-align: center; 
+.rotate { transform: rotate(180deg); }
+
+
+/* ========================================= */
+/* 6. FILTER (RADIO & CHECKBOX)              */
+/* ========================================= */
+.filter-section {
+    margin-top: 25px;
+    border-top: 1px solid #eee;
+    padding: 15px 20px;
 }
-.card-content .author {
-    font-size: 0.65em; 
-    color: var(--light-text);
-    margin-bottom: 2px; 
-}
-.card-content .title {
-    font-size: 0.75em; 
-    font-weight: 600;
+/* Gaya Radio Button Baru */
+.radio-item, .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    font-size: 14px;
     color: var(--dark-text);
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    min-height: 2em; 
+    padding: 5px 0;
+}
+.radio-item:hover, .filter-item:hover {
+    background-color: var(--light-bg);
+    border-radius: 4px;
+}
+.radio-item input, .filter-item input[type="radio"] {
+    accent-color: var(--primary-color);
+    margin-right: 5px;
+}
+.filter-item input[type="radio"]:checked + span {
+    font-weight: 700;
 }
 
-
-/* ======== HALAMAN SEARCH & DETAIL ======== */
-
-/* BARU: Kontainer Search & Sort di Homepage */
+/* ========================================= */
+/* 7. SEARCH, SORT & HISTORY                 */
+/* ========================================= */
 .search-sort-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 20px;
     margin-bottom: 30px;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding: 0 20px;
 }
-/* BARU: Kontainer Search Bar & Riwayat */
 .search-bar-container {
     flex: 1;
-    position: relative; /* Kunci untuk dropdown */
+    position: relative;
     max-width: 600px;
 }
-/* SEARCH BAR */
 .search-bar {
-    flex: 1;
     display: flex;
     align-items: center;
     background: #fff;
     border: 1px solid #e5e5e5;
     border-radius: 35px;
     padding: 12px 20px;
-    width: 100%; /* Pastikan 100% dari .search-bar-container */
+    width: 100%;
 }
 .search-bar input {
     border: none;
@@ -368,69 +347,12 @@ a {
     margin-right: 10px;
     color: #555;
 }
-.filter-wrapper {
-    display: inline-block;
-}
-/* #urutkan {
-    border: 1px solid var(--border-color); /* <-- Ini border-nya */
-    /* border-radius: 12px; /* Sudut membulat */
-    /* padding: 8px 18px;
-} */ */ */
 
-#urutkan:hover .dropdown-content {
-    display: block;
-}
-#urutkan .dropdown-content {
-    top: 100%; /* DIUBAH: Posisikan tepat di bawah */
-    left: 0;
-    right: 0; 
-    width: 100%;
-    min-width: 0;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    padding-top: 10px; /* BARU: 'Jembatan' tak terlihat */
-}
-
-.filter-box {
-    position: relative;
-    border: 1px solid #e5e5e5;
-    border-radius: 12px;
-    padding: 12px 18px;
-    background: #fff;
-    width: 180px;
-}
-.filter-label {
-    font-size: 13px;
-    color: #9a9a9a;
-    margin-bottom: 3px;
-    display: block;
-}
-.filter-select {
-    width: 100%;
-    padding: 2px 0;
-    border: none;
-    outline: none;
-    font-size: 16px;
-    font-family: inherit;
-    background: transparent;
-    appearance: none;
-    cursor: pointer;
-}
-
-.filter-box::after {
-    content: "▾";
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-10%);
-    font-size: 16px;
-    pointer-events: none;
-}
-
-/* ======== BARU: Style Dropdown Riwayat Pencarian ======== */
+/* History Dropdown */
 .search-history {
-    display: none; /* Sembunyi by default */
+    display: none; 
     position: absolute;
-    top: 105%; /* Tepat di bawah search bar */
+    top: 105%; 
     left: 0;
     width: 100%;
     background: var(--white);
@@ -445,236 +367,124 @@ a {
     justify-content: space-between;
     align-items: center;
     padding-bottom: 10px;
-    margin-bottom: 10px;
     border-bottom: 1px solid var(--border-color);
+    margin-bottom: 10px;
 }
-.history-header h3 {
-    font-size: 1.1em;
-    font-weight: 600;
-    margin: 0;
-}
-.clear-history-btn {
-    background: none;
-    border: none;
-    color: var(--light-text);
-    font-family: 'Poppins', sans-serif;
-    font-size: 0.9em;
-    font-weight: 500;
-    cursor: pointer;
-    text-decoration: underline;
-}
-.history-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
+.history-list { list-style: none; margin: 0; padding: 0; }
 .history-list li {
     display: flex;
     align-items: center;
     padding: 10px 5px;
     border-radius: 6px;
     font-size: 0.95em;
-}
-.history-list li:hover {
-    background-color: var(--light-bg);
-}
-.history-list li.history-empty {
-    color: var(--light-text);
-    font-style: italic;
-    padding: 10px 5px;
-}
-.history-list li i {
-    color: var(--light-text);
-    margin-right: 12px;
-    font-size: 0.9em;
-}
-.history-list li .history-term {
-    flex-grow: 1;
     cursor: pointer;
 }
-.delete-item-btn {
-    background: none;
-    border: none;
-    font-size: 1.4em;
-    color: var(--light-text);
+.history-list li:hover { background-color: var(--light-bg); }
+
+/* ========================================= */
+/* 8. ACTIVE FILTERS (PILLS STYLE)           */
+/* ========================================= */
+.active-filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 0 20px;
+    margin-bottom: 20px;
+}
+
+/* Gaya Pill Modern */
+.filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 14px;
+    color: #333;
     cursor: pointer;
-    padding: 0 5px;
-    line-height: 1;
+    transition: all 0.2s ease;
+    user-select: none;
+    text-decoration: none;
 }
-.delete-item-btn:hover {
-    color: var(--dark-text);
+.filter-pill:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    background-color: #f9f9ff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
-
-
-/* ======== FILTER SIDEBAR (GAYA BARU TOTAL) ======== */
-/* Judul "Filter" */
-.filter-title {
-    font-size: 1.5em;
-    font-weight: 600;
-    color: var(--dark-text);
-    margin-bottom: 15px;
-    padding: 20px 20px 10px 20px; /* Tambah padding */
-    border-bottom: 1px solid var(--border-color);
+.filter-pill .icon-tag { font-size: 12px; color: #666; }
+.filter-pill:hover .icon-tag { color: var(--primary-color); }
+.remove-single {
+    margin-left: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    color: #999;
+    font-size: 10px;
 }
-/* Grup "Kategori", "Bahasa" */
-.filter-group {
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 10px;
-    padding: 0 20px; /* Padding untuk grup */
+.filter-pill:hover .remove-single {
+    background-color: rgba(166, 149, 255, 0.1);
+    color: var(--primary-color);
 }
-.filter-group:last-of-type {
-    border-bottom: none;
-}
-.filter-group-title { /* Judul "Kategori", "Bahasa" */
+.clear-all-btn, .filter-pill.clear-all {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+    padding: 0;
     font-weight: 700;
-    font-size: 1.2em;
-    color: var(--dark-text);
-    padding: 12px 0;
-    cursor: pointer;
-    list-style: none;
+}
+.clear-all-btn:hover, .filter-pill.clear-all:hover {
+    background: #ffebee;
+    color: #d32f2f;
+    border-color: #d32f2f;
+}
+
+/* ========================================= */
+/* 9. CONTENT GRID & BOOK CARDS              */
+/* ========================================= */
+.home-content, .results-content {
+    min-width: 0;
+    padding: 0;
+    border-radius: 8px;
+}
+.category-shelf { margin-bottom: 40px; }
+.shelf-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-}
-.filter-group-title::-webkit-details-marker { display: none; }
-.filter-group-title::after {
-    content: 'v';
-    font-family: monospace;
-    font-weight: 700;
-    font-size: 1.2em;
-    transition: transform 0.2s;
-    transform: scaleY(0.8);
-}
-.filter-group[open] > .filter-group-title::after {
-    transform: rotate(180deg) scaleY(0.8);
-}
-.filter-options-list { padding-bottom: 10px; }
-
-/* Grup Bertingkat (Kategori -> Sub -> Sub-Sub) */
-.filter-item-nested {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-.filter-item-nested > summary {
-    font-size: 1em; 
-    font-weight: 400; 
-    padding: 0;
-    list-style: none;
-    position: relative;
-    cursor: pointer;
-}
-.filter-item-nested > summary::-webkit-details-marker { display: none; }
-/* Panah custom untuk sub-grup */
-.filter-item-nested > summary::before {
-    content: 'v';
-    font-family: monospace;
-    font-weight: 700;
-    font-size: 1em;
-    transition: transform 0.2s;
-    transform: scaleY(0.8);
-    position: absolute;
-    left: 0;
-    top: 8px;
-    color: var(--light-text);
-}
-.filter-item-nested[open] > summary::before {
-    transform: rotate(180deg) scaleY(0.8);
-}
-/* Opsi di dalam sub-grup */
-.filter-options-nested {
-    padding-left: 20px; /* Indentasi */
-}
-.filter-options-nested-sub {
-    padding-left: 20px; /* Indentasi lebih dalam */
-}
-
-/* === PERBAIKAN DI SINI === */
-
-/* Item Filter (UNTUK BAHASA - Tampilan Radio Button) */
-.filter-item {
-    display: flex; /* DIUBAH: dari block ke flex */
-    align-items: center; /* BARU: ratakan secara vertikal */
-    font-size: 1em;
-    font-weight: 400;
-    color: var(--dark-text);
-    padding: 8px 0;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-.filter-item:hover {
-    background-color: var(--light-bg); /* Warna abu-abu muda */
-}
-/* TAMPILKAN radio button untuk BAHASA */
-.filter-item input[type="radio"] {
-    display: inline-block; /* DIUBAH: dari none ke inline-block */
-    margin-right: 10px; /* BARU: Beri jarak antara tombol dan teks */
-    accent-color: var(--primary-color); /* BARU: Warnai tombol radio saat dicentang */
-}
-/* Tampilan aktif/checked untuk Link Bahasa */
-.filter-item input[type="radio"]:checked + span {
-    font-weight: 700;
-    color: var(--dark-text); 
-}
-
-/* Item Filter (UNTUK KATEGORI - Tampilan Link) */
-.filter-item-link, .filter-item-label {
-    display: block;
-    font-size: 1em;
-    font-weight: 400;
-    color: var(--dark-text);
-    padding: 8px 10px; /* DIUBAH: Menambahkan padding horizontal */
-    cursor: pointer;
-    border-radius: 8px; /* DIUBAH: Dibuat lebih bulat */
-    transition: background-color 0.2s;
-}
-
-.filter-item-link:hover,
-.filter-item-label:hover {
-    background-color: var(--light-bg);
-}
-.filter-item-nested > summary > .filter-item-label {
-    padding-left: 20px;
-    margin-left: 0;
-}
-/* Sembunyikan radio button untuk KATEGORI */
-.filter-item-label input[type="radio"] {
-    display: none;
-}
-/* Tampilan aktif/checked untuk Link Kategori */
-.filter-item-link.active span,
-.filter-item-label.active span,
-.filter-item-label input[type="radio"]:checked + span {
-    font-weight: 700;
-    color: var(--dark-text); 
-}
-/* === AKHIR PERBAIKAN === */
-
-
-/* Grid Hasil Pencarian */
-.results-content { 
-    min-width: 0; 
-    padding: 0; 
-    border-radius: 8px; 
-}
-.results-header {
-   display: none; 
-}
-.results-header-count {
-    font-size: 0.95em; 
-    color: var(--light-text);
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     padding-left: 20px;
 }
+.see-more { color: var(--primary-color); font-weight: 500; padding-right: 20px; }
+
+/* Horizontal Scroll List */
+.book-list-horizontal {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding: 0 20px 15px 20px;
+}
+
+/* Grid Result */
 .results-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
-    gap: 15px; 
-    padding: 0 20px 15px 20px; 
-}
-.results-grid .book-card-small {
-    flex: none; 
-    width: auto; 
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    padding: 0 20px 15px 20px;
 }
 .no-results {
     grid-column: 1 / -1;
@@ -683,11 +493,41 @@ a {
     color: var(--light-text);
 }
 
-/* ======== FOOTER BARU (DIGABUNGKAN) ======== */
-.footer {
-    font-family: "Poppins";
-    color: #000;
+/* Card Style */
+.book-card-small {
+    flex: 0 0 150px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--white);
+    transition: box-shadow 0.2s;
 }
+.book-card-small:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.card-image {
+    width: 80%;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: #f0f0f0;
+    margin: 8px auto;
+}
+.card-image img { width: 100%; height: 100%; object-fit: cover; }
+.card-content { padding: 0 8px 8px 8px; text-align: center; }
+.card-content .author { font-size: 0.65em; color: var(--light-text); }
+.card-content .title {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--dark-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2em;
+}
+
+/* ========================================= */
+/* 10. FOOTER                                */
+/* ========================================= */
+.footer { font-family: "Poppins"; color: #000; }
 .footer-top {
     max-width: 1200px;
     margin: 0 auto;
@@ -704,20 +544,10 @@ a {
     gap: 8px;
     font-size: 1.8em;
     font-weight: 700;
-    color: var(--dark-text);
-    line-height: 0;
 }
-.footer-logo img {
-    height: 35px; /* Ukuran logo footer */
-    width: auto;
-}
-.footer-tagline {
-    font-size: 14px;
-    color: #555;
-    font-style: italic;
-}
+.footer-logo img { height: 35px; width: auto; }
 .footer-container {
-    background: #e8e0ff; /* Warna ungu dari CSS Anda */
+    background: #e8e0ff;
     padding: 40px;
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -725,33 +555,15 @@ a {
     max-width: 1200px;
     margin: auto;
 }
-.footer-column h3 {
-    font-size: 18px;
-    font-weight: 700;
-    margin-bottom: 15px;
-}
+.footer-column h3 { font-size: 18px; font-weight: 700; margin-bottom: 15px; }
 .footer-column a {
     display: block;
     margin-bottom: 8px;
     color: #000;
-    text-decoration: none;
     font-size: 15px;
 }
-.footer-column a:hover {
-    opacity: 0.6;
-}
-.social-icons {
-    display: flex;
-    gap: 12px;
-    margin-top: 10px;
-}
-.social-icons i {
-    font-size: 20px;
-    cursor: pointer;
-}
-.social-icons i:hover {
-    opacity: 0.6;
-}
+.footer-column a:hover { opacity: 0.6; }
+.social-icons { display: flex; gap: 12px; margin-top: 10px; }
 .footer-bottom {
     text-align: center;
     padding: 20px 0;
@@ -760,388 +572,47 @@ a {
     background-color: var(--white);
 }
 
-
-/* Halaman Detail */
-.main-content.container {
-    padding-top: 40px; 
-}
-.breadcrumb {
-    font-size: 0.9em;
-    color: var(--light-text);
-    margin-bottom: 25px;
-}
-.breadcrumb a {
-    color: var(--light-text);
-    text-decoration: none;
-}
-.breadcrumb a:hover {
-    color: var(--primary-color);
-}
-.breadcrumb span {
-    color: var(--dark-text);
-    font-weight: 500;
-}
-
-.back-link {
-    display: none;
-}
-.book-detail-card {
-    background-color: var(--white);
-    padding: 0; 
-    border-radius: 0;
-    box-shadow: none; 
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 40px;
-}
-.book-detail-image img {
+/* ========================================= */
+/* 11. LOADER & RESPONSIVE                   */
+/* ========================================= */
+#global-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100%;
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.3); 
+    z-index: 99999;
+    display: none;
+    justify-content: center;
+    align-items: center;
 }
-.book-detail-info {
-    display: flex;
-    flex-direction: column;
-    gap: 20px; 
+.spinner-icon {
+    font-size: 60px;
+    color: var(--primary-color);
+    animation: spin 0.8s linear infinite;
 }
-.book-detail-info h1 {
-    font-size: 2.2em; 
-    font-weight: 700;
-    color: var(--dark-text);
-    margin: 0;
-    line-height: 1.3;
-}
-.book-detail-info .detail-author {
-    font-size: 1em;
-    color: var(--light-text);
-    margin: 0;
-}
-.detail-price {
-    font-size: 1.8em;
-    font-weight: 700;
-    color: var(--dark-text); 
-    margin: 0;
-}
-.detail-info-block {
-    border-top: 1px solid var(--border-color);
-    padding-top: 20px;
-}
-.detail-info-block h4 {
-    font-size: 1.1em;
-    font-weight: 600;
-    margin-bottom: 8px;
-}
-.detail-description {
-    font-size: 0.95em;
-    line-height: 1.7;
-    color: var(--light-text);
-}
-.detail-specs-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px 30px; 
-    font-size: 0.9em;
-}
-.detail-specs-grid div {
-    padding: 0;
-}
-.detail-specs-grid p {
-    margin: 0 0 10px 0;
-    line-height: 1.6;
-}
-.detail-specs-grid p strong {
-    display: block; 
-    color: var(--light-text);
-    font-weight: 400;
-}
-.detail-specs-grid div strong {
-    color: var(--dark-text);
-}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* --- RESPONSIVE ADJUSTMENTS --- */
 @media (max-width: 992px) {
-    .footer-container {
-        grid-template-columns: 1fr 1fr; /* 2 kolom di tablet */
-    }
+    .footer-container { grid-template-columns: 1fr 1fr; }
 }
-
 @media (max-width: 768px) {
     .page-layout {
         grid-template-columns: 1fr; 
         padding: 20px 0;
     }
     .home-sidebar, .filter-sidebar {
-        order: 1; /* Filter di atas di mobile */
+        order: 1; 
         position: static;
         height: auto;
         overflow-y: visible;
+        border-right: none;
+        margin-right: 0;
     }
-    .home-content {
-        order: 2; /* Konten di bawah filter */
-        padding: 0; 
-    }
-    .search-sort-container { 
-        flex-direction: column;
-        gap: 15px;
-        padding-left: 15px;
-        padding-right: 15px;
-    }
-    .new-sort-form, .filter-wrapper {
-        flex-basis: auto;
-        width: 100%;
-        margin-left: 0;
-    }
-    .new-search-form, .search-bar {
-        width: 100%;
-        max-width: 100%;
-    }
-
-    .shelf-header {
-        padding-left: 15px; 
-    }
-    .see-more {
-        padding-right: 15px; 
-    }
-    .book-list-horizontal {
-        padding: 0 15px 15px 15px; 
-        gap: 10px; 
-    }
-    .results-content {
-        padding: 0; 
-    }
-    .results-header-count {
-        padding-left: 15px;
-    }
-    .results-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); 
-        gap: 10px;
-        padding: 0 15px 15px 15px; 
-    }
-    .book-card-small {
-        flex: 0 0 100px; 
-    }
-    .card-content .author {
-        font-size: 0.6em;
-    }
-    .card-content .title {
-        font-size: 0.7em;
-        min-height: 1.8em;
-    }
-    .book-detail-card {
-        grid-template-columns: 1fr;
-        padding: 20px;
-    }
-    .footer-top {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-        padding: 20px;
-    }
-    .footer-container {
-        grid-template-columns: 1fr; /* 1 kolom di mobile */
-        padding: 20px;
-    }
-    .footer-brand, .footer-links {
-        flex-basis: auto;
-    }
-    .footer-links {
-        flex-direction: column;
-        text-align: center;
-    }
-    .footer-column ul {
-        padding: 0;
-    }
-    .social-media {
-        justify-content: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .navbar .container {
-        flex-direction: column;
-        gap: 10px;
-    }
-    .navbar-left, .navbar-right {
-        gap: 15px;
-    }
-    .navbar-links {
-        flex-wrap: wrap;
-        justify-content: center;
-    }
-    .hero-carousel {
-        height: 250px;
-    }
-   
-    .slide-content h1 {
-        font-size: 1.8em;
-        
-    }
-    .book-list-horizontal {
-        gap: 8px;
-    }
-    .book-card-small {
-        flex: 0 0 90px;
-    }
-    .card-content .author, .card-content .title {
-        font-size: 0.6em;
-    }
-    .results-grid {
-        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-        padding: 0 10px 15px 10px; 
-        gap: 10px;
-    }
-    .search-sort-container {
-        padding-left: 10px;
-        padding-right: 10px;
-    }
-    .results-header-count {
-        padding-left: 10px;
-    }
-}
-
-/* ======== BARU: Kontainer Filter Aktif ======== */
-.active-filters-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding-left: 20px;
-    padding-right: 20px;
-    margin-bottom: 20px;
-}
-.filter-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background-color: var(--light-bg); /* Latar abu-abu muda */
-    border: 1px solid var(--border-color);
-    border-radius: 20px; /* Bulat */
-    padding: 5px 12px;
-    font-size: 0.9em;
-    font-weight: 500;
-    color: var(--dark-text);
-    text-decoration: none;
-}
-.filter-pill .icon-tag {
-    font-size: 0.8em;
-    color: var(--light-text);
-}
-.filter-pill.clear-all {
-    font-weight: 700;
-    color: var(--dark-text);
-    font-size: 1.1em;
-    padding: 3px 10px;
-}
-.filter-pill.clear-all:hover {
-    background-color: #e9ecef;
-}
-
-.sidebar-category ul {
-    list-style: none;
-    padding-left: 0;
-    margin: 0;
-}
-
-/* Item Kategori (Baris) */
-.cat-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px; /* Sedikit padding agar lega */
-    border-bottom: 1px solid #f0f0f0;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.cat-item:hover {
-    background-color: #f8f9fa;
-}
-
-/* Link Kategori */
-.cat-item a {
-    text-decoration: none;
-    color: #333;
-    flex-grow: 1;
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.cat-item a.active {
-    color: var(--primary-color); /* Menggunakan variabel warna dari root */
-    font-weight: 700;
-}
-
-/* Tombol Panah (Toggle) */
-.toggle-btn {
-    padding: 0 5px;
-    color: #999;
-    transition: transform 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.toggle-btn:hover {
-    color: var(--dark-text);
-}
-
-/* Submenu Container (Default Tersembunyi) */
-.submenu {
-    display: none; /* KUNCI: Sembunyi by default */
-    background-color: #fff;
-}
-
-/* Indentasi Bertingkat */
-.submenu .cat-item {
-    padding-left: 30px; /* Level 2 */
-    font-size: 0.95em;
-    background-color: #fafafa;
-}
-
-.submenu .submenu .cat-item {
-    padding-left: 45px; /* Level 3 */
-    background-color: #f5f5f5;
-}
-
-.submenu .submenu .submenu .leaf-link {
-    padding-left: 60px; /* Level 4 */
-}
-
-/* Link Terakhir (Tanpa Panah) */
-.leaf-link {
-    display: block;
-    padding: 8px 15px 8px 0;
-    font-size: 13px;
-    color: #666;
-    text-decoration: none;
-    border-bottom: 1px solid #f0f0f0;
-    transition: color 0.2s;
-}
-
-.leaf-link:hover {
-    color: var(--primary-color);
-    background-color: #f0f0ff;
-}
-
-.leaf-link.active {
-    color: var(--primary-color);
-    font-weight: 700;
-}
-
-/* Utility Classes */
-.rotate {
-    transform: rotate(180deg); /* Memutar panah saat dibuka */
-}
-
-/* Sidebar Container (Agar rapi di layout grid) */
-.home-sidebar {
-    border-right: 1px solid var(--border-color);
-    background: var(--white);
-}
-
-.sidebar-title {
-    font-size: 1.2em;
-    font-weight: 700;
-    padding: 20px 15px 10px 15px;
-    margin: 0;
-    border-bottom: 2px solid #f0f0f0;
+    .home-content { order: 2; }
+    .search-sort-container { flex-direction: column; padding: 0 15px; }
+    .footer-top, .footer-container { flex-direction: column; grid-template-columns: 1fr; text-align: center; }
+    .footer-links { text-align: center; }
+    .social-icons { justify-content: center; }
 }

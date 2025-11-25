@@ -164,8 +164,18 @@ def index():
     is_clean_home = not (search_query or current_filter or current_lang != 'all' or page_range != 'all' or sort_option != 'price_asc')
     
     if is_clean_home:
-        all_books_for_shelves = get_books("", "", "all", "all", "price_asc", limit=100, offset=0)
-        grouped_books = group_books_by_category(all_books_for_shelves)
+        for category_name in all_categories:
+            # Panggil get_books dengan filter kategori spesifik ("cat_NamaKategori")
+            # Kita ambil 4 atau 10 buku per kategori
+            books_in_cat = get_books(
+                current_filter=f"cat_{category_name}", 
+                sort_option="price_asc", 
+                limit=10
+            )
+            
+            # Jika ada buku di kategori ini, masukkan ke grouped_books
+            if books_in_cat:
+                grouped_books[category_name] = books_in_cat
 
     active_filters = build_active_filters(current_filter, current_lang, search_query, page_range, sort_option)
 

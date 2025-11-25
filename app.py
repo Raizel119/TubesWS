@@ -6,7 +6,6 @@ import queries
 
 app = Flask(__name__)
 
-# Filter untuk encode URL agar aman dipakai di query-string
 @app.template_filter('uquote')
 def uquote_filter(s):
     if s:
@@ -19,10 +18,10 @@ def about():
 
 FUSEKI_URL = "http://localhost:3030/bookara/query"
 
-# -----------------------------------------------
-# Fungsi umum untuk menjalankan query ke Fuseki
-# -----------------------------------------------
 def run_query(query_string):
+    """
+    # Mengirim query SPARQL mentah ke server Fuseki dan mengembalikan hasil dalam format JSON bindings.
+    """
     sparql = SPARQLWrapper(FUSEKI_URL)
     sparql.setQuery(queries.PREFIX + "\n" + query_string)
     sparql.setReturnFormat(JSON)
@@ -33,14 +32,10 @@ def run_query(query_string):
         print(f"SPARQL Error: {e}")
         return []
 
-# -----------------------------------------------
-# Memetakan row hasil query menjadi dict buku rapi
-# -----------------------------------------------
 def map_book_row(row):
     gambar = row.get("Gambar", {}).get("value", "")
-    if not gambar:
-        gambar = ""  # fallback jika tidak ada gambar
-
+    
+    # ID diambil dengan memecah URI (misal: http://buku.org/buku#B001 -> B001)
     return {
         "id": row.get("id", {}).get("value", "").split("#")[-1],
         "Judul": row.get("Judul", {}).get("value", ""),
@@ -50,28 +45,26 @@ def map_book_row(row):
         "Subkategori1": row.get("Sub1", {}).get("value", ""),
         "Subkategori2": row.get("Sub2", {}).get("value", ""),
         "Subkategori3": row.get("Sub3", {}).get("value", ""),
-        "Gambar": gambar
+        "Gambar": gambar if gambar else ""
     }
 
-# Ambil semua kategori utama untuk sidebar
 def load_categories():
     rows = run_query(queries.GET_ALL_CATEGORIES)
     return [r["cat"]["value"] for r in rows]
 
-# Ambil daftar bahasa
 def load_languages():
     rows = run_query(queries.GET_ALL_LANGUAGES)
     return [r["lang"]["value"] for r in rows]
 
-# --------------------------------------------------
-# Membangun nested map untuk kategori → sub1 → sub2
-# Data "tidak ditemukan" otomatis dibersihkan
-# --------------------------------------------------
 def load_nested_map():
+    """
+    Membangun struktur hierarki kategori untuk Sidebar:
+    Kategori -> Sub1 -> Sub2 -> Sub3.
+    Membersihkan data yang bernilai null atau 'tidak ditemukan' dari graph.
+    """
     rows = run_query(queries.GET_NESTED_MAP)
     nested = {}
 
-    # Bersihkan value kosong atau "tidak ditemukan"
     def clean(val):
         if not val: return None
         if val.strip().lower() == "tidak ditemukan": return None
@@ -83,43 +76,32 @@ def load_nested_map():
         sub2 = clean(r.get("sub2", {}).get("value"))
         sub3 = clean(r.get("sub3", {}).get("value"))
 
-        if not cat:
-            continue
+        if not cat: continue
 
-        if cat not in nested:
-            nested[cat] = {}
-
+        if cat not in nested: nested[cat] = {}
         if sub1:
-            if sub1 not in nested[cat]:
-                nested[cat][sub1] = {}
-
+            if sub1 not in nested[cat]: nested[cat][sub1] = {}
             if sub2:
-                if sub2 not in nested[cat][sub1]:
-                    nested[cat][sub1][sub2] = []
-
+                if sub2 not in nested[cat][sub1]: nested[cat][sub1][sub2] = []
                 if sub3 and sub3 not in nested[cat][sub1][sub2]:
                     nested[cat][sub1][sub2].append(sub3)
-
     return nested
 
-# -------------------------------------------------
-# Mengambil daftar buku dengan filter, sorting, dll
-# -------------------------------------------------
 def get_books(search_query="", current_filter="", current_lang="all",
-              page_range="all", sort_option="price_asc",
-              limit=20, offset=0):
-
-    # Build block WHERE melalui helper di queries.py
+                page_range="all", sort_option="price_asc",
+                limit=20, offset=0):
+    """
+    Fungsi orkestrator pencarian buku:
+    1. Meminta queries.py membuat string FILTER berdasarkan input user.
+    2. Meminta queries.py membuat query utama digabung dengan sorting/limit.
+    3. Menjalankan query dan memapping hasilnya.
+    """
     filters_block = queries.build_filter_string(
         search_query, current_filter, current_lang, page_range
     )
-
-    # Query utama buku (dengan sorting)
     q = queries.get_books_query(filters_block, sort_option, limit, offset)
-
     return [map_book_row(r) for r in run_query(q)]
 
-# Hitung total buku untuk pagination
 def get_total_books_count(search_query="", current_filter="", current_lang="all", page_range="all"):
     filters_block = queries.build_filter_string(search_query, current_filter, current_lang, page_range)
     q = queries.get_total_count_query(filters_block)
@@ -128,103 +110,77 @@ def get_total_books_count(search_query="", current_filter="", current_lang="all"
         return int(rows[0]["count"]["value"])
     return 0
 
-# Mengelompokkan buku per kategori untuk halaman home
-def group_books_by_category(all_books):
-    grouped = {}
-    for b in all_books:
-        cat = b.get("KategoriUtama") or "Uncategorized"
-        grouped.setdefault(cat, [])
-        grouped[cat].append(b)
-    return {k: v[:10] for k, v in grouped.items()}
-
-# -------------------------------------------------
-# Build daftar filter aktif (tag biru di atas hasil)
-# -------------------------------------------------
 def build_active_filters(current_filter, current_lang, search_query, page_range, sort_option):
+    """
+    Helper untuk UI: Membuat list 'tags' filter yang sedang aktif
+    supaya user bisa melihat apa yang sedang mereka filter (Search Breadcrumbs).
+    """
     active = []
 
-    # Tag pencarian
     if search_query:
         active.append({"key": "query", "value": f'"{search_query}"'})
 
-    # Tag kategori/subkategori
     if current_filter:
+        # Menghapus prefix teknis (cat_, sub_) untuk tampilan user
         clean = re.sub(r'^(cat_|sub_|subsub_|sub3_)', '', current_filter)
-        clean_display = unquote(clean)
-        active.append({"key": "filter", "value": clean_display})
+        active.append({"key": "filter", "value": unquote(clean)})
 
-    # Tag bahasa
     if current_lang and current_lang != "all":
         active.append({"key": "lang", "value": current_lang})
 
-    # Tag jumlah halaman
     if page_range and page_range != "all":
         active.append({"key": "page_range", "value": f"{page_range} Hal"})
 
-    # Tag sorting
     if sort_option:
-        label = ""
-        if sort_option == "date_newest": label = "Terbaru"
-        elif sort_option == "date_oldest": label = "Terlama"
-        elif sort_option == "price_desc": label = "Harga Tertinggi"
-        elif sort_option == "price_asc": label = "Harga Terendah"
-
-        if label:
-            active.append({"key": "sort", "value": label})
+        labels = {
+            "date_newest": "Terbaru", "date_oldest": "Terlama",
+            "price_desc": "Harga Tertinggi", "price_asc": "Harga Terendah"
+        }
+        if sort_option in labels:
+            active.append({"key": "sort", "value": labels[sort_option]})
 
     return active
 
-# -------------------------------------------------
-# ROUTE: Halaman utama / katalog
-# -------------------------------------------------
 @app.route("/")
 def index():
+    # Mengambil parameter dari URL (?query=..., ?filter=...)
     search_query = request.args.get("query", "")
     current_filter = request.args.get("filter", "")
     current_lang = request.args.get("lang", "all")
     sort_option = request.args.get("sort", "price_asc")
     page_range = request.args.get("page_range", "all")
 
-    # Ambil buku sesuai filter
+    # Ambil data utama
     books = get_books(search_query, current_filter, current_lang, page_range, sort_option, limit=20)
     total_count = get_total_books_count(search_query, current_filter, current_lang, page_range)
 
-    all_categories = load_categories()
-    all_languages = load_languages()
-    nested_category_map = load_nested_map()
-
-    # Cek apakah home sedang "bersih" → tampilkan rak kategori
+    # Cek kondisi "Home Bersih" (tanpa filter aktif) untuk menampilkan rak kategori
     is_clean_home = not (
         search_query or current_filter or current_lang != 'all'
         or page_range != 'all' or sort_option != 'price_asc'
     )
 
     grouped_books = {}
+    all_categories = load_categories()
+
     if is_clean_home:
+        # Jika di home, ambil preview 10 buku untuk setiap kategori utama
         for category_name in all_categories:
-            # Panggil get_books dengan filter kategori spesifik ("cat_NamaKategori")
-            # Kita ambil 4 atau 10 buku per kategori
             books_in_cat = get_books(
                 current_filter=f"cat_{category_name}", 
                 sort_option="price_asc", 
                 limit=10
             )
-            
-            # Jika ada buku di kategori ini, masukkan ke grouped_books
             if books_in_cat:
                 grouped_books[category_name] = books_in_cat
-
-    active_filters = build_active_filters(
-        current_filter, current_lang, search_query, page_range, sort_option
-    )
 
     return render_template(
         "index.html",
         books=books,
         grouped_books=grouped_books,
         all_categories=all_categories,
-        all_languages=all_languages,
-        nested_category_map=nested_category_map,
+        all_languages=load_languages(),
+        nested_category_map=load_nested_map(),
         total_count=total_count,
         results_count=len(books),
         current_filter=current_filter,
@@ -232,39 +188,32 @@ def index():
         search_query=search_query,
         sort_option=sort_option,
         page_range=page_range,
-        active_filters=active_filters
+        active_filters=build_active_filters(current_filter, current_lang, search_query, page_range, sort_option)
     )
 
-# -------------------------------------------------
-# ROUTE: Infinite scroll (Load More)
-# -------------------------------------------------
 @app.route("/api/load-more")
 def load_more():
-    search_query = request.args.get("query", "")
-    current_filter = request.args.get("filter", "")
-    current_lang = request.args.get("lang", "all")
-    sort_option = request.args.get("sort", "price_asc")
-    page_range = request.args.get("page_range", "all")
-
     offset = request.args.get("offset", 0, type=int)
-    limit = 20
-
-    books = get_books(search_query, current_filter, current_lang, page_range, sort_option, limit, offset)
+    books = get_books(
+        request.args.get("query", ""), 
+        request.args.get("filter", ""), 
+        request.args.get("lang", "all"), 
+        request.args.get("page_range", "all"), 
+        request.args.get("sort", "price_asc"), 
+        limit=20, offset=offset
+    )
     return jsonify(books)
 
-# -------------------------------------------------
-# ROUTE: Halaman detail buku
-# -------------------------------------------------
 @app.route("/book/<id>")
 def detail(id):
-    q = queries.get_book_detail_query(id)
-    rows = run_query(q)
-
-    if not rows:
-        abort(404)
+    # Query detail buku spesifik
+    rows = run_query(queries.get_book_detail_query(id))
+    if not rows: abort(404)
 
     r = rows[0]
+    # Mapping manual field detail yang lebih lengkap dibanding list view
     book = {
+        "id": id,
         "Judul": r.get("Judul", {}).get("value", ""),
         "Penulis": r.get("Penulis", {}).get("value", ""),
         "Harga": r.get("Harga", {}).get("value", ""),
@@ -283,38 +232,25 @@ def detail(id):
         "Format": r.get("Format", {}).get("value", ""),
         "Deskripsi": r.get("Deskripsi", {}).get("value", ""),
         "Gambar": r.get("Gambar", {}).get("value", "/static/img/cover.avif"),
-        "URL": r.get("URL", {}).get("value", "#"),
-        "id": id
+        "URL": r.get("URL", {}).get("value", "#")
     }
 
-    # Buku lain dari penulis yang sama
+    # Logika rekomendasi: Cari buku lain dengan penulis yang sama.
+    # Memecah string penulis (misal: "A, B") menjadi list agar query lebih akurat.
     more_books = []
-    raw_author = book["Penulis"]
-    
-    if raw_author:
-        # Pecah string berdasarkan koma (,)
-        # Contoh: "Nur Aksin, Anna Yuni" -> ["Nur Aksin", "Anna Yuni"]
-        author_list = [name.strip() for name in raw_author.split(',') if name.strip()]
-        
+    if book["Penulis"]:
+        author_list = [name.strip() for name in book["Penulis"].split(',') if name.strip()]
         if author_list:
-            # Kirim list penulis ke query baru
-            q_author = queries.get_books_by_author_query(author_list, id)
-            rows_author = run_query(q_author)
+            rows_author = run_query(queries.get_books_by_author_query(author_list, id))
             more_books = [map_book_row(row) for row in rows_author]
-
-    all_categories = load_categories()
-    nested_category_map = load_nested_map()
 
     return render_template(
         "detail.html",
         book=book,
         more_books=more_books,
-        all_categories=all_categories,
-        nested_category_map=nested_category_map
+        all_categories=load_categories(),
+        nested_category_map=load_nested_map()
     )
 
-# -------------------------------------------------
-# Menjalankan server Flask
-# -------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

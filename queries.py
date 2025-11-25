@@ -1,44 +1,22 @@
 # queries.py
 
-# ==========================================================
-# 1. PREFIX GLOBAL UNTUK SEMUA QUERY
-#    Prefix ini dipakai supaya query SPARQL lebih pendek.
-# ==========================================================
 PREFIX = """
 PREFIX bu: <http://buku.org/buku#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 """
 
-# ==========================================================
-# 2. QUERY STATIS
-#    Query langsung tanpa filter dinamis.
-# ==========================================================
-
-# Ambil semua kategori utama
+# Query sederhana untuk mengisi dropdown/sidebar
 GET_ALL_CATEGORIES = """
-SELECT DISTINCT ?cat WHERE {
-    ?b bu:KategoriUtama ?cat .
-}
-ORDER BY ?cat
+SELECT DISTINCT ?cat WHERE { ?b bu:KategoriUtama ?cat . } ORDER BY ?cat
 """
 
-# Ambil semua bahasa yang ada dalam data
 GET_ALL_LANGUAGES = """
-SELECT DISTINCT ?lang WHERE {
-    ?b bu:Bahasa ?lang .
-}
-ORDER BY ?lang
+SELECT DISTINCT ?lang WHERE { ?b bu:Bahasa ?lang . } ORDER BY ?lang
 """
 
-# Ambil semua tanggal terbit (dipakai untuk kebutuhan tertentu)
-GET_ALL_DATES = """
-SELECT DISTINCT ?date WHERE {
-    ?b bu:TanggalTerbit ?date .
-}
-"""
-
-# Ambil struktur kategori lengkap: kategori → sub1 → sub2 → sub3
+# Mengambil graph hierarki kategori (Cat -> Sub1 -> Sub2 -> Sub3)
+# OPTIONAL digunakan karena tidak semua buku memiliki subkategori mendalam
 GET_NESTED_MAP = """
 SELECT DISTINCT ?cat ?sub1 ?sub2 ?sub3 WHERE {
     ?b bu:KategoriUtama ?cat .
@@ -49,64 +27,54 @@ SELECT DISTINCT ?cat ?sub1 ?sub2 ?sub3 WHERE {
 ORDER BY ?cat ?sub1 ?sub2 ?sub3
 """
 
-# ==========================================================
-# 3. PEMBUAT FILTER BERDASARKAN JUMLAH HALAMAN
-# ==========================================================
 def get_page_filter_clause(page_range):
-    if not page_range or page_range == "all":
-        return ""
-    
+    """
+    Membuat filter rentang halaman.
+    Menggunakan casting xsd:integer() karena data RDF seringkali berupa string.
+    """
     if page_range == "0-100":
         return "FILTER(xsd:integer(?Halaman) <= 100)"
     elif page_range == "100-200":
         return "FILTER(xsd:integer(?Halaman) > 100 && xsd:integer(?Halaman) <= 200)"
     elif page_range == "200+":
         return "FILTER(xsd:integer(?Halaman) > 200)"
-    
     return ""
 
-# ==========================================================
-# 4. PEMBUAT FILTER UTAMA (search, kategori, bahasa, halaman)
-#    Fungsi ini membuat potongan query SPARQL sesuai input
-# ==========================================================
 def build_filter_string(search_query, current_filter, current_lang, page_range):
-    sq = search_query.replace('"', '\\"')
+    """
+    Inti logika pencarian dinamis.
+    Fungsi ini menyusun potongan string FILTER(...) berdasarkan input user.
+    Hasilnya akan disisipkan ke dalam query utama (WHERE clause).
+    """
+    sq = search_query.replace('"', '\\"') # Sanitasi kutip
     filter_clauses = []
     
-    # ---------- Filter Kategori ----------
+    # 1. Filter Hierarki Kategori
+    # Mengecek prefix (cat_, sub_, dll) untuk menentukan level kedalaman filter
     if current_filter:
-        # Filter kategori utama
+        val = current_filter.replace("cat_", "").replace("sub_", "").replace("subsub_", "").replace("sub3_", "")
+        
         if current_filter.startswith("cat_"):
-            val = current_filter.replace("cat_", "")
             filter_clauses.append(f'?b bu:KategoriUtama "{val}" .')
-
-        # Filter subkategori 1/2/3
         elif current_filter.startswith("sub_"):
-            val = current_filter.replace("sub_", "")
-            filter_clauses.append(
-                f'FILTER(?Sub1 = "{val}" || ?Sub2 = "{val}" || ?Sub3 = "{val}")'
-            )
-
-        # Filter level subkategori 2
+            # Subkategori level 1 bisa muncul di properti Sub1, Sub2, atau Sub3 (pencarian melebar)
+            filter_clauses.append(f'FILTER(?Sub1 = "{val}" || ?Sub2 = "{val}" || ?Sub3 = "{val}")')
         elif current_filter.startswith("subsub_"):
-            val = current_filter.replace("subsub_", "")
             filter_clauses.append(f'?b bu:Subkategori2 "{val}" .')
-
-        # Filter level subkategori 3
         elif current_filter.startswith("sub3_"):
-            val = current_filter.replace("sub3_", "")
             filter_clauses.append(f'?b bu:Subkategori3 "{val}" .')
 
-    # ---------- Filter Bahasa ----------
+    # 2. Filter Bahasa
     if current_lang != "all":
         filter_clauses.append(f'?b bu:Bahasa "{current_lang}" .')
 
-    # ---------- Filter Halaman ----------
+    # 3. Filter Jumlah Halaman
     page_clause = get_page_filter_clause(page_range)
     if page_clause:
         filter_clauses.append(page_clause)
 
-    # ---------- Filter Search ----------
+    # 4. Filter Search Text (Judul atau Penulis)
+    # Menggunakan LCASE untuk pencarian case-insensitive
     search_clause = ""
     if sq:
         search_clause = f'''
@@ -118,19 +86,19 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
     
     return "\n".join(filter_clauses) + ("\n" + search_clause if search_clause else "")
 
-# ==========================================================
-# 5. QUERY DETAIL BUKU BERDASARKAN ID
-# ==========================================================
 def get_book_detail_query(book_id):
+    """
+    Mengambil data lengkap satu buku berdasarkan ID.
+    ID dicocokkan dengan teknik string manipulation pada URI (STRAFTER).
+    """
     return f"""
     SELECT ?Judul ?Penulis ?Harga ?KategoriUtama
-           ?Sub1 ?Sub2 ?Sub3 ?Penerbit ?TanggalTerbit ?ISBN ?Halaman ?Bahasa
-           ?Panjang ?Lebar ?Berat ?Format ?Deskripsi ?Gambar ?URL
+            ?Sub1 ?Sub2 ?Sub3 ?Penerbit ?TanggalTerbit ?ISBN ?Halaman ?Bahasa
+            ?Panjang ?Lebar ?Berat ?Format ?Deskripsi ?Gambar ?URL
     WHERE {{
         ?b rdf:type bu:Buku .
         FILTER(STRAFTER(STR(?b), "#") = "{book_id}")
 
-        # Semua bagian data buku bersifat opsional
         OPTIONAL {{ ?b bu:Judul ?Judul . }}
         OPTIONAL {{ ?b bu:Penulis ?Penulis . }}
         OPTIONAL {{ ?b bu:Harga ?Harga . }}
@@ -154,12 +122,14 @@ def get_book_detail_query(book_id):
     LIMIT 1
     """
 
-# ==========================================================
-# 6. QUERY LIST BUKU UTAMA (dengan sorting, paging, dll)
-# ==========================================================
 def get_books_query(filters_block, sort_option, limit=20, offset=0):
+    """
+    Query utama list buku.
+    - filters_block: string hasil generate dari build_filter_string()
+    - BIND(extractedYear): Mengekstrak tahun (YYYY) dari string TanggalTerbit menggunakan Regex.
+    """
     
-    # Bagian sorting berdasarkan opsi
+    # Logika Sorting: Membersihkan 'Rp' dan titik '.' agar bisa disortir secara numerik
     if sort_option == "price_asc":
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
     elif sort_option == "price_desc":
@@ -176,7 +146,6 @@ def get_books_query(filters_block, sort_option, limit=20, offset=0):
         ?b rdf:type bu:Buku .
         ?b bu:Judul ?Judul .
 
-        # Semua data buku bersifat opsional
         OPTIONAL {{ ?b bu:Penulis ?Penulis . }}
         OPTIONAL {{ ?b bu:Harga ?Harga . }}
         OPTIONAL {{ ?b bu:KategoriUtama ?KategoriUtama . }}
@@ -187,10 +156,7 @@ def get_books_query(filters_block, sort_option, limit=20, offset=0):
         OPTIONAL {{ ?b bu:Halaman ?Halaman . }}
         OPTIONAL {{ ?b bu:TanggalTerbit ?TanggalTerbit . }}
 
-        # Ambil tahun dari TanggalTerbit
         BIND(xsd:integer(REPLACE(STR(?TanggalTerbit), ".*([0-9]{4}).*", "$1")) AS ?extractedYear)
-
-        # Ambil ID buku dari URI
         BIND(STRAFTER(STR(?b), "#") AS ?id)
 
         {filters_block}
@@ -200,10 +166,8 @@ def get_books_query(filters_block, sort_option, limit=20, offset=0):
     OFFSET {offset}
     """
 
-# ==========================================================
-# 7. QUERY TOTAL JUMLAH BUKU (untuk pagination)
-# ==========================================================
 def get_total_count_query(filters_block):
+    """Menghitung total item untuk kebutuhan pagination."""
     return f"""
     SELECT (COUNT(DISTINCT ?b) as ?count) WHERE {{
         ?b rdf:type bu:Buku .
@@ -212,34 +176,27 @@ def get_total_count_query(filters_block):
         OPTIONAL {{ ?b bu:Harga ?Harga . }}
         OPTIONAL {{ ?b bu:KategoriUtama ?KategoriUtama . }}
         OPTIONAL {{ ?b bu:Subkategori1 ?Sub1 . }}
-        OPTIONAL {{ ?b bu:Subkategori2 ?Sub2 . }}
-        OPTIONAL {{ ?b bu:Subkategori3 ?Sub3 . }}
         OPTIONAL {{ ?b bu:Halaman ?Halaman . }}
         
         {filters_block}
     }}
     """
 
-# [PERBAIKAN] QUERY BUKU PENULIS YANG LEBIH FLEKSIBEL
 def get_books_by_author_query(author_list, exclude_id, limit=6):
-    # author_list adalah list, contoh: ["Nur Aksin", "Anna Yuni Astuti"]
-    
+    """
+    Mencari buku lain berdasarkan list nama penulis.
+    Membuat klausa OR dinamis: FILTER (CONTAINS(Penulis, A) || CONTAINS(Penulis, B))
+    exclude_id dipakai agar buku yang sedang dibuka tidak muncul lagi di rekomendasi.
+    """
     filter_parts = []
     for name in author_list:
-        # Bersihkan nama dan escape tanda kutip
         safe_name = name.strip().replace('"', '\\"')
-        # Hindari query string kosong atau terlalu pendek
         if len(safe_name) > 1:
-            # Buat logika: CONTAINS(..., "nama")
             filter_parts.append(f'CONTAINS(LCASE(STR(?Penulis)), LCASE("{safe_name}"))')
     
-    # Gabungkan dengan logika OR (||)
-    # Hasil: (CONTAINS(..., "A") || CONTAINS(..., "B"))
     if filter_parts:
-        or_clause = " || ".join(filter_parts)
-        final_filter = f"FILTER({or_clause})"
+        final_filter = f"FILTER({' || '.join(filter_parts)})"
     else:
-        # Fallback jika list kosong, jangan return apa-apa
         return "SELECT * WHERE { ?s ?p ?o } LIMIT 0"
 
     return f"""
@@ -248,16 +205,12 @@ def get_books_by_author_query(author_list, exclude_id, limit=6):
         ?b bu:Penulis ?Penulis .
         ?b bu:Judul ?Judul .
         
-        # Filter Multi-Author Dynamic
         {final_filter}
         
         OPTIONAL {{ ?b bu:Harga ?Harga . }}
         OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
         
-        # Ambil ID buku
         BIND(STRAFTER(STR(?b), "#") AS ?id)
-
-        # Jangan tampilkan buku yang sama
         FILTER(?id != "{exclude_id}")
     }}
     LIMIT {limit}

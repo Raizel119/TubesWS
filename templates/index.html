@@ -208,27 +208,27 @@
                         
                         <div class="search-bar-container" style="flex-grow: 1; position: relative; max-width: 100%;">
                             <form action="/" method="GET" class="search-bar" id="search-form" style="display: flex; align-items: center; background: #fff; border: 1px solid #e5e5e5; border-radius: 50px; padding: 12px 20px; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.03); position: relative;">
-                                <input type="hidden" name="filter" value="{{ current_filter or '' }}">
-                                <input type="hidden" name="lang" value="{{ current_lang or 'all' }}">
-                                <input type="hidden" name="page_range" value="{{ page_range or 'all' }}">
-                                <input type="hidden" name="sort" value="{{ sort_option or 'price_asc' }}">
+                                <input type="hidden" name="filter" value="{{ current_filter or '' }}" >
+                                <input type="hidden" name="lang" value="{{ current_lang or 'all' }}" >
+                                <input type="hidden" name="page_range" value="{{ page_range or 'all' }}" >
+                                <input type="hidden" name="sort" value="{{ sort_option or 'price_asc' }}" >
                                 
                                 <span class="material-symbols-outlined" style="font-size: 22px; color: #888; flex-shrink: 0;">search</span>
-                                <input type="text" name="query" id="search-input" placeholder="Cari Judul Buku atau Penulis" value="{{ search_query or '' }}" autocomplete="off" style="flex-grow: 1; border: none; outline: none; font-size: 1em; margin-left: 10px; background: transparent; padding-right: 30px;">
+                                <input type="text" name="query" id="search-input" placeholder="Cari Judul Buku atau Penulis" value="{{ search_query or '' }}"  autocomplete="off" style="flex-grow: 1; border: none; outline: none; font-size: 1em; margin-left: 10px; background: transparent; padding-right: 30px;">
                                 
                                 <button type="button" id="clear-search-btn" style="display: none; background: none; border: none; color: #999; cursor: pointer; font-size: 18px; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); padding: 5px;">
                                     <i class="fa-solid fa-times"></i>
                                 </button>
                             </form>
                             
-                            <div class="search-history" id="search-history-dropdown">
-                                <div class="history-header">
-                                    <h3>Riwayat Pencarian</h3>
-                                    <button type="button" class="clear-history-btn" id="clear-history">Hapus Semua</button>
-                                </div>
-                                <ul class="history-list" id="history-list"></ul>
-                            </div>
-                        </div>
+                       <div class="search-history" id="search-history-dropdown">
+        <div class="history-header">
+            <h3>Riwayat Pencarian</h3>
+            <button type="button" class="clear-history-btn" id="clear-history">Hapus Semua</button>
+        </div>
+        <ul class="history-list" id="history-list"></ul>
+    </div>
+</div>
 
                         <button type="button" id="open-filter-btn" class="btn-filter-trigger">
                             <i class="fas fa-sliders-h"></i> Filter & Urutkan
@@ -239,7 +239,7 @@
 
                 {% if current_filter or search_query or current_lang != 'all' or (sort_option and sort_option != 'price_asc') or page_range != 'all' %}
                     
-                    <div class="results-header-count">
+                    <div class="results-header-count" style="margin-bottom: 10px;">
                         Menampilkan <strong>{{ results_count }}</strong> dari <strong>{{ total_count }}</strong> produk
                         {% if search_query %} untuk "<strong>{{ search_query }}</strong>" {% endif %}
                     </div>
@@ -269,7 +269,7 @@
                     <div class="results-grid" id="books-container">
                         {% for book in books %}
                             <div class="book-card-small">
-                                <a href="/book/{{ book.id }}" class="card-link">
+                                <a href="/book/{{ book.id }}" class="card-link"  >
                                     <div class="card-image">
                                         {% if book.Gambar and book.Gambar != 'Tidak ditemukan' and book.Gambar|length > 5 %}
                                             <img src="{{ book.Gambar }}" alt="{{ book.Judul }}" onerror="this.onerror=null; this.src='/static/img/placeholder.jpg';">
@@ -342,7 +342,7 @@
         <div class="footer-top">
             <div class="footer-logo">
                 <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Bookara" />
-                <span>Bookara</span>
+               
             </div>
             <div class="footer-tagline">Search Smarter. Read Better.</div>
         </div>

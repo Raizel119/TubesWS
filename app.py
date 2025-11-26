@@ -206,7 +206,7 @@ def load_more():
 
 @app.route("/book/<id>")
 def detail(id):
-    # Query detail buku spesifik
+    # Query detail buku spesifik dari Fuseki lokal
     rows = run_query(queries.get_book_detail_query(id))
     if not rows: abort(404)
 
@@ -235,8 +235,18 @@ def detail(id):
         "URL": r.get("URL", {}).get("value", "#")
     }
 
+    # 🌟 FITUR BARU: Ambil data penulis dari DBpedia
+    author_dbpedia = None
+    if book["Penulis"]:
+        print(f"🔍 Mencari info penulis '{book['Penulis']}' di DBpedia...")
+        author_dbpedia = queries.get_author_info_from_dbpedia(book["Penulis"])
+        
+        if author_dbpedia:
+            print(f"✅ Data penulis ditemukan di DBpedia!")
+        else:
+            print(f"❌ Data penulis tidak ditemukan di DBpedia")
+
     # Logika rekomendasi: Cari buku lain dengan penulis yang sama.
-    # Memecah string penulis (misal: "A, B") menjadi list agar query lebih akurat.
     more_books = []
     if book["Penulis"]:
         author_list = [name.strip() for name in book["Penulis"].split(',') if name.strip()]
@@ -247,6 +257,7 @@ def detail(id):
     return render_template(
         "detail.html",
         book=book,
+        author_dbpedia=author_dbpedia,  # 🌟 Kirim data DBpedia ke template
         more_books=more_books,
         all_categories=load_categories(),
         nested_category_map=load_nested_map()

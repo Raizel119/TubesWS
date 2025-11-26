@@ -52,14 +52,14 @@ if os.path.exists(output_file):
         if 'URL Buku' in df_existing.columns:
             visited_products.update(df_existing['URL Buku'].dropna().tolist())
             total_books_scraped = len(visited_products)
-            print(f"✅ Selesai. Ditemukan {total_books_scraped} buku yang sudah tersimpan. Scraping akan melewatkan buku-buku ini.")
+            print(f"Selesai. Ditemukan {total_books_scraped} buku yang sudah tersimpan. Scraping akan melewatkan buku-buku ini.")
         else:
-            print(f"⚠️ Kolom 'URL Buku' tidak ditemukan. File mungkin korup. Membuat file baru.")
+            print(f"Kolom 'URL Buku' tidak ditemukan. File mungkin korup. Membuat file baru.")
             if os.path.exists(output_file):
                 os.remove(output_file)
             
     except Exception as e:
-        print(f"⚠️ Gagal membaca file Excel lama: {e}. Membuat file baru (file lama akan dihapus).")
+        print(f"Gagal membaca file Excel lama: {e}. Membuat file baru (file lama akan dihapus).")
         try:
             if os.path.exists(output_file):
                 os.remove(output_file)
@@ -74,7 +74,7 @@ else:
 visited_categories = set()
 
 # --------------------------------------
-# 🔹 Fungsi bantu (get_subcategories & get_products)
+# Fungsi bantu (get_subcategories & get_products)
 # --------------------------------------
 def get_subcategories(soup, current_url):
     """Mengambil semua link subkategori unik dari halaman."""
@@ -131,7 +131,7 @@ def get_products_from_parent_grid(soup):
     return list(products)
 
 # --------------------------------------
-# 🔹 Fungsi scraping detail buku
+# Fungsi scraping detail buku
 # --------------------------------------
 def scrape_book(url):
     """Mengambil detail satu buku dari URL-nya."""
@@ -209,10 +209,10 @@ def scrape_book(url):
                 elif label_text == "Panjang": data_buku['Panjang'] = value_text
                 elif label_text == "Berat": data_buku['Berat'] = value_text
         
-        print(f"✅ Done: {data_buku['Judul']}")
+        print(f"Done: {data_buku['Judul']}")
         return data_buku
     except Exception as e:
-        print(f"❌ Error scrape {url}: {e}")
+        print(f"Error scrape {url}: {e}")
         return data_buku # Kembalikan data default (dengan URL) jika gagal
 
 # --------------------------------------
@@ -239,7 +239,7 @@ def save_products_to_excel(product_links, url_kategori="", is_lainnya=False):
             pass # Lewati buku yang sudah ada
     
     if not links_to_scrape:
-        print(f"ℹ️ Tidak ada buku baru di batch ini yang perlu disimpan (semua sudah ada di Excel).")
+        print(f"Tidak ada buku baru di batch ini yang perlu disimpan (semua sudah ada di Excel).")
         return
 
     print(f"Scraping {len(links_to_scrape)} buku baru dari batch ini...")
@@ -294,13 +294,13 @@ def save_products_to_excel(product_links, url_kategori="", is_lainnya=False):
                                           startrow=start_row)
             
             total_books_scraped += new_books_found
-            print(f"✅ Berhasil! Total buku tersimpan: {total_books_scraped}")
+            print(f"Berhasil! Total buku tersimpan: {total_books_scraped}")
         
         except Exception as e:
-            print(f"❌ GAGAL menyimpan ke Excel: {e}")
+            print(f"GAGAL menyimpan ke Excel: {e}")
             backup_file = f"cadangan_{url_kategori.split('/')[-1]}_{int(time.time())}.xlsx"
             df_batch.to_excel(backup_file, index=False)
-            print(f"ℹ️ Data batch disimpan ke file cadangan: {backup_file}")
+            print(f"Data batch disimpan ke file cadangan: {backup_file}")
 
 
 # --------------------------------------
@@ -311,7 +311,7 @@ def crawl_category(url):
     global total_books_scraped, visited_products
     
     if url in visited_categories:
-        print(f"ℹ️ Kategori {url} sudah dikunjungi, dilewati.")
+        print(f"Kategori {url} sudah dikunjungi, dilewati.")
         return
     visited_categories.add(url)
 
@@ -329,11 +329,11 @@ def crawl_category(url):
             load_more_categories_button = WebDriverWait(driver, 3).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "button[data-testid='categoriesLoadMore']"))
             )
-            print("🔄 Menemukan tombol 'Muat Lebih Banyak' (KATEGORI) — mengklik...")
+            print("Menemukan tombol 'Muat Lebih Banyak' (KATEGORI) — mengklik...")
             driver.execute_script("arguments[0].click();", load_more_categories_button)
             time.sleep(1) # Beri waktu kategori baru untuk dimuat
     except Exception:
-        print("✅ Tidak ada lagi tombol 'Muat Lebih Banyak' (KATEGORI) di halaman ini.")
+        print("Tidak ada lagi tombol 'Muat Lebih Banyak' (KATEGORI) di halaman ini.")
 
     # Ambil soup SETELAH semua subkategori (mungkin) di-load
     soup = BeautifulSoup(driver.page_source, "html.parser")
@@ -343,7 +343,7 @@ def crawl_category(url):
     # ---------------------------------
     parent_product_list_container = soup.find(attrs={'data-testid': 'categoriesParentProductList'})
     if parent_product_list_container:
-        print(f"📚 Ditemukan bagian 'Lainnya di kategori ini'. Memuat semua produk (infinite scroll)...")
+        print(f"Ditemukan bagian 'Lainnya di kategori ini'. Memuat semua produk (infinite scroll)...")
         try:
             # Temukan anchor untuk infinite scroll
             anchor = driver.find_element(By.CSS_SELECTOR, "div[data-testid='categoriesProductListInfiniteScrollAnchor']")
@@ -356,18 +356,18 @@ def crawl_category(url):
                 
                 # Jika jumlah produk tidak bertambah, berhenti
                 if current_product_count == last_product_count and last_product_count > 0:
-                    print("✅ Infinite scroll 'Lainnya' selesai.")
+                    print("Infinite scroll 'Lainnya' selesai.")
                     break
                 
                 last_product_count = current_product_count
                 
                 # Scroll ke anchor
                 driver.execute_script("arguments[0].scrollIntoView();", anchor)
-                print(f"🔄 Scrolling ke bawah... (produk: {current_product_count})")
+                print(f"Scrolling ke bawah... (produk: {current_product_count})")
                 time.sleep(1) # Tunggu 2 detik untuk produk baru
 
         except Exception as e:
-            print(f"⚠️ Selesai/Error saat scrolling 'Lainnya di kategori ini'. Mungkin sudah di akhir.")
+            print(f"Selesai/Error saat scrolling 'Lainnya di kategori ini'. Mungkin sudah di akhir.")
         
         # Ambil produk HANYA dari grid "Lainnya"
         soup_final_parent = BeautifulSoup(driver.page_source, "html.parser")
@@ -383,7 +383,7 @@ def crawl_category(url):
     subcats = get_subcategories(soup, url)
     
     if subcats:
-        print(f"📂 Ditemukan {len(subcats)} subkategori. Melanjutkan penjelajahan...")
+        print(f"Ditemukan {len(subcats)} subkategori. Melanjutkan penjelajahan...")
         for sub in subcats:
             crawl_category(sub) # Panggil diri sendiri (rekursif)
     
@@ -392,7 +392,7 @@ def crawl_category(url):
     # (Jika TIDAK ada grid "Lainnya" DAN TIDAK ada subkategori)
     # ---------------------------------
     elif not parent_product_list_container and not subcats:
-        print(f"🍂 Ini adalah halaman produk 'leaf' (tanpa 'Lainnya' & subkategori).")
+        print(f"Ini adalah halaman produk 'leaf' (tanpa 'Lainnya' & subkategori).")
         
         # --- BLOK FILTER STOK HANYA UNTUK LEAF PAGE ---
         print("Mencari filter stok...")
@@ -401,14 +401,14 @@ def crawl_category(url):
                 EC.presence_of_element_located((By.CSS_SELECTOR, "button[data-testid='productListFilterStockSwitch']"))
             )
             if stock_filter_switch.get_attribute('data-state') == 'checked':
-                print("⚪ Filter 'Hanya yang tersedia' aktif. Menonaktifkan filter...")
+                print("Filter 'Hanya yang tersedia' aktif. Menonaktifkan filter...")
                 driver.execute_script("arguments[0].click();", stock_filter_switch)
                 time.sleep(1) 
-                print("🟢 Filter stok dinonaktifkan.")
+                print("Filter stok dinonaktifkan.")
             else:
-                print("🟢 Filter 'Hanya yang tersedia' sudah tidak aktif.")
+                print("Filter 'Hanya yang tersedia' sudah tidak aktif.")
         except Exception:
-            print(f"⚠️ Tidak dapat menemukan filter stok di halaman 'leaf' ini. Melanjutkan...")
+            print(f"Tidak dapat menemukan filter stok di halaman 'leaf' ini. Melanjutkan...")
         # --- AKHIR DARI BLOK FILTER STOK ---
         
         print(f"Memuat semua produk (tombol)...")
@@ -422,14 +422,14 @@ def crawl_category(url):
                 
                 # Pastikan ini BUKAN tombol kategori
                 if load_more_products_button.get_attribute('data-testid') == 'categoriesLoadMore':
-                    print("✅ Tombol 'Muat Lebih Banyak' KATEGORI terdeteksi, tapi ini 'leaf', berhenti.")
+                    print("Tombol 'Muat Lebih Banyak' KATEGORI terdeteksi, tapi ini 'leaf', berhenti.")
                     break
                     
-                print("🔄 Menemukan tombol 'Muat Lebih Banyak' (PRODUK) — mengklik...")
+                print("Menemukan tombol 'Muat Lebih Banyak' (PRODUK) — mengklik...")
                 driver.execute_script("arguments[0].click();", load_more_products_button)
                 time.sleep(1)
             except Exception:
-                print("✅ Tidak ada lagi tombol 'Muat Lebih Banyak' (PRODUK).")
+                print("Tidak ada lagi tombol 'Muat Lebih Banyak' (PRODUK).")
                 break
         
         # Ambil produk dari SEMUA halaman
@@ -440,17 +440,17 @@ def crawl_category(url):
         # Panggil save_products_to_excel TANPA flag (is_lainnya=False)
         save_products_to_excel(products_leaf, url_kategori=url)
         
-    print(f"✅ Penjelajahan kategori {url} selesai.")
+    print(f"Penjelajahan kategori {url} selesai.")
 
 
 # === Jalankan dari kategori utama ===
 try:
     crawl_category(start_url)
-    print(f"\n🎉 Selesai! Total {total_books_scraped} buku unik berhasil disimpan di '{output_file}'!")
+    print(f"\n Selesai! Total {total_books_scraped} buku unik berhasil disimpan di '{output_file}'!")
 except KeyboardInterrupt:
-    print("\n🛑 Proses dihentikan oleh pengguna (Ctrl+C). Data yang sudah selesai per-batch telah disimpan.")
+    print("\nProses dihentikan oleh pengguna (Ctrl+C). Data yang sudah selesai per-batch telah disimpan.")
 except Exception as e:
-    print(f"\n❌ Terjadi error yang tidak terduga: {e}")
+    print(f"\nTerjadi error yang tidak terduga: {e}")
 finally:
     # Selalu pastikan driver ditutup
     driver.quit()

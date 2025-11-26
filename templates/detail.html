@@ -164,6 +164,117 @@
 
         </div>
     </div> 
+        {% if author_dbpedia %}
+    <div class="author-dbpedia-section" style="margin-top: 50px; padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
+            <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 10px;">
+                <i class="fas fa-globe" style="font-size: 32px; color: #fff;"></i>
+            </div>
+            <div>
+                <h2 style="color: #fff; margin: 0; font-size: 24px;">Informasi Penulis dari DBpedia</h2>
+                <p style="color: rgba(255,255,255,0.8); margin: 5px 0 0 0; font-size: 13px;">
+                    Data real-time dari Linked Open Data
+                </p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: auto 1fr; gap: 30px; background: rgba(255,255,255,0.95); padding: 25px; border-radius: 12px;">
+            
+            <!-- Foto Penulis -->
+            {% if author_dbpedia.thumbnail %}
+            <div style="text-align: center;">
+                <img src="{{ author_dbpedia.thumbnail }}" 
+                     alt="{{ book.Penulis }}" 
+                     style="width: 180px; height: 240px; object-fit: cover; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 4px solid #fff;"
+                     onerror="this.style.display='none';">
+                <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                    <i class="fas fa-camera"></i> Sumber: DBpedia
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- Detail Info -->
+            <div>
+                <h3 style="color: #667eea; margin-bottom: 15px; font-size: 20px;">
+                    <i class="fas fa-user-circle"></i> {{ book.Penulis }}
+                </h3>
+
+                <!-- Tanggal Lahir -->
+                {% if author_dbpedia.birthDate %}
+                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-birthday-cake" style="color: #764ba2; width: 20px;"></i>
+                    <div>
+                        <strong style="color: #333;">Tanggal Lahir:</strong>
+                        <span style="color: #555;">{{ author_dbpedia.birthDate[:10] }}</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Tanggal Wafat -->
+                {% if author_dbpedia.deathDate %}
+                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-cross" style="color: #764ba2; width: 20px;"></i>
+                    <div>
+                        <strong style="color: #333;">Tanggal Wafat:</strong>
+                        <span style="color: #555;">{{ author_dbpedia.deathDate[:10] }}</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Kewarganegaraan -->
+                {% if author_dbpedia.nationality %}
+                <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-flag" style="color: #764ba2; width: 20px;"></i>
+                    <div>
+                        <strong style="color: #333;">Kewarganegaraan:</strong>
+                        <span style="color: #555;">{{ author_dbpedia.nationality }}</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Biografi -->
+                {% if author_dbpedia.abstract %}
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #e0e0e0;">
+                    <h4 style="color: #667eea; margin-bottom: 10px;">
+                        <i class="fas fa-book-open"></i> Biografi
+                    </h4>
+                    <p style="color: #555; line-height: 1.7; text-align: justify; font-size: 14px;">
+                        {{ author_dbpedia.abstract[:500] }}
+                        {% if author_dbpedia.abstract|length > 500 %}...{% endif %}
+                    </p>
+                </div>
+                {% endif %}
+
+                <!-- Link DBpedia -->
+                {% if author_dbpedia.uri %}
+                <div style="margin-top: 20px;">
+                    <a href="{{ author_dbpedia.uri }}" 
+                       target="_blank" 
+                       style="display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 10px 20px; border-radius: 25px; text-decoration: none; font-weight: 600; font-size: 13px; transition: transform 0.2s;">
+                        <i class="fas fa-external-link-alt"></i>
+                        Lihat di DBpedia
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Badge Linked Open Data -->
+        <div style="margin-top: 15px; text-align: right;">
+            <span style="background: rgba(255,255,255,0.2); color: #fff; padding: 6px 15px; border-radius: 20px; font-size: 11px; font-weight: 600;">
+                <i class="fas fa-link"></i> Powered by Linked Open Data (LOD)
+            </span>
+        </div>
+    </div>
+    {% else %}
+    <!-- Jika data tidak ditemukan di DBpedia -->
+    <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">
+        <p style="margin: 0; color: #856404;">
+            <i class="fas fa-info-circle"></i> 
+            <strong>Info:</strong> Data penulis tidak ditemukan di DBpedia. Menampilkan data lokal saja.
+        </p>
+    </div>
+    {% endif %}
     {% if more_books %}
     <div class="category-shelf" style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
         <div class="shelf-header" style="padding-left: 0;">

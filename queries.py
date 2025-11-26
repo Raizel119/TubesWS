@@ -1,12 +1,15 @@
 # queries.py
+from SPARQLWrapper import SPARQLWrapper, JSON
 
 PREFIX = """
 PREFIX bu: <http://buku.org/buku#>
 PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 """
+DBPEDIA_ENDPOINT = "https://dbpedia.org/sparql"
 
 # Query sederhana untuk mengisi dropdown/sidebar
+# kategori di navbar
 GET_ALL_CATEGORIES = """
 SELECT DISTINCT ?cat WHERE { ?b bu:KategoriUtama ?cat . } ORDER BY ?cat
 """
@@ -47,6 +50,7 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
     Hasilnya akan disisipkan ke dalam query utama (WHERE clause).
     """
     sq = search_query.replace('"', '\\"') # Sanitasi kutip
+    # misal The "Great" Book -> The \"Great\" Book
     filter_clauses = []
     
     # 1. Filter Hierarki Kategori
@@ -215,3 +219,93 @@ def get_books_by_author_query(author_list, exclude_id, limit=6):
     }}
     LIMIT {limit}
     """
+# ========== FUNGSI BARU: INTEGRASI DBPEDIA ==========
+def get_author_info_from_dbpedia(author_name):
+    """
+    Versi Final Fix:
+    1. Menggunakan quadruple backslash (\\\\s) agar terkirim sebagai (\\s) ke SPARQL.
+    2. Menangani sanitasi kutip ganda (") agar query tidak pecah.
+    """
+    if not author_name:
+        return None
+
+    clean_name = author_name.split(',')[0].strip()
+    
+    # --- LOGIKA REGEX & ESCAPING ---
+    # Python: "\\\\s"  -> Output String: "\\s" -> SPARQL menerima: "\\s" -> Regex Engine: "\s" (Whitespace)
+    # Jika hanya "\s", SPARQL menganggapnya error "Bad escape sequence".
+    
+    safe_regex = clean_name \
+        .replace(".", "[.]\\\\s*") \
+        .replace(" ", "\\\\s+") \
+        .replace('"', '\\"') # Sanitasi jika nama mengandung kutip (misal: O'Neil)
+
+    # Bersihkan nama untuk penebakan URI (ganti spasi jadi underscore)
+    # Kita juga perlu sanitasi kutip untuk URI constructor
+    uri_guess_name = clean_name.replace(" ", "_").replace('"', '')
+
+    query = f"""
+    PREFIX dbo: <http://dbpedia.org/ontology/>
+    PREFIX dbr: <http://dbpedia.org/resource/>
+    PREFIX foaf: <http://xmlns.com/foaf/0.1/>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+    
+    SELECT DISTINCT ?author ?abstract ?birthDate ?deathDate ?thumbnail ?nationality WHERE {{
+        {{
+            # Opsi 1: Regex Match pada rdfs:label
+            ?author a dbo:Writer ;
+                    rdfs:label ?name .
+            FILTER(LANG(?name) = "en")
+            # Regex sekarang aman karena menggunakan double backslash
+            FILTER(REGEX(?name, "^{safe_regex}", "i"))
+        }}
+        UNION
+        {{
+            # Opsi 2: Tebak URI langsung
+            BIND(URI(CONCAT("http://dbpedia.org/resource/", ENCODE_FOR_URI("{uri_guess_name}"))) AS ?author)
+            ?author a dbo:Writer .
+        }}
+
+        OPTIONAL {{ 
+            ?author dbo:abstract ?abstract .
+            FILTER(LANG(?abstract) = "en")
+        }}
+        
+        OPTIONAL {{ ?author dbo:birthDate ?birthDate . }}
+        OPTIONAL {{ ?author dbo:deathDate ?deathDate . }}
+        OPTIONAL {{ ?author dbo:thumbnail ?thumbnail . }}
+        
+        OPTIONAL {{ 
+            ?author dbo:nationality ?nat .
+            ?nat rdfs:label ?nationality .
+            FILTER(LANG(?nationality) = "en")
+        }}
+    }}
+    LIMIT 1
+    """
+    
+    sparql = SPARQLWrapper(DBPEDIA_ENDPOINT)
+    sparql.setQuery(query)
+    sparql.setReturnFormat(JSON)
+    sparql.setTimeout(10)
+    
+    try:
+        results = sparql.query().convert()
+        bindings = results["results"]["bindings"]
+        
+        if bindings:
+            data = bindings[0]
+            return {
+                "uri": data.get("author", {}).get("value", ""),
+                "abstract": data.get("abstract", {}).get("value", ""),
+                "birthDate": data.get("birthDate", {}).get("value", ""),
+                "deathDate": data.get("deathDate", {}).get("value", ""),
+                "thumbnail": data.get("thumbnail", {}).get("value", ""),
+                "nationality": data.get("nationality", {}).get("value", "")
+            }
+        return None
+    except Exception as e:
+        # Menampilkan pesan error singkat untuk debugging
+        error_msg = str(e).splitlines()[0]
+        print(f"⚠️ DBpedia Error: {error_msg}")
+        return None

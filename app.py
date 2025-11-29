@@ -20,7 +20,7 @@ FUSEKI_URL = "http://localhost:3030/bookara/query"
 
 def run_query(query_string):
     """
-    # Mengirim query SPARQL mentah ke server Fuseki dan mengembalikan hasil dalam format JSON bindings.
+    Mengirim query SPARQL mentah ke server Fuseki dan mengembalikan hasil dalam format JSON bindings.
     """
     sparql = SPARQLWrapper(FUSEKI_URL)
     sparql.setQuery(queries.PREFIX + "\n" + query_string)

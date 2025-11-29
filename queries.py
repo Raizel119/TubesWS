@@ -8,7 +8,7 @@ PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 """
 DBPEDIA_ENDPOINT = "https://dbpedia.org/sparql"
 
-# Query sederhana untuk mengisi dropdown/sidebar
+# Query sederhana untuk mengisi sidebar
 # kategori di navbar
 GET_ALL_CATEGORIES = """
 SELECT DISTINCT ?cat WHERE { ?b bu:KategoriUtama ?cat . } ORDER BY ?cat
@@ -33,7 +33,7 @@ ORDER BY ?cat ?sub1 ?sub2 ?sub3
 def get_page_filter_clause(page_range):
     """
     Membuat filter rentang halaman.
-    Menggunakan casting xsd:integer() karena data RDF seringkali berupa string.
+    Menggunakan casting xsd:integer() karena bisa saja ada data RDF yang string.
     """
     if page_range == "0-100":
         return "FILTER(xsd:integer(?Halaman) <= 100)"
@@ -46,7 +46,7 @@ def get_page_filter_clause(page_range):
 def build_filter_string(search_query, current_filter, current_lang, page_range):
     """
     Inti logika pencarian dinamis.
-    Fungsi ini menyusun potongan string FILTER(...) berdasarkan input user.
+    Menyusun potongan string FILTER(...) berdasarkan input user.
     Hasilnya akan disisipkan ke dalam query utama (WHERE clause).
     """
     sq = search_query.replace('"', '\\"') # Sanitasi kutip

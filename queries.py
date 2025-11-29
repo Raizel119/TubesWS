@@ -309,3 +309,69 @@ def get_author_info_from_dbpedia(author_name):
         error_msg = str(e).splitlines()[0]
         print(f"⚠️ DBpedia Error: {error_msg}")
         return None
+    
+# Tambahkan ini di bagian paling bawah queries.py
+
+def get_film_adaptation(book_title, author_name):
+    if not book_title: return None
+    
+    clean_title = book_title.split('(')[0].strip()
+    # Ambil 3 kata pertama
+    words = clean_title.split()
+    search_term = " ".join(words[:3]) if len(words) > 3 else clean_title
+        
+    safe_regex = search_term \
+        .replace(".", "[.]\\\\s*") \
+        .replace(" ", "\\\\s+") \
+        .replace('"', '\\"')
+
+    query = f"""
+    PREFIX dbo: <http://dbpedia.org/ontology/>
+    PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+    SELECT DISTINCT ?filmTitle ?directorName ?poster ?abstract ?uri WHERE {{
+        ?film a dbo:Film ;
+              rdfs:label ?filmTitle .
+        
+        FILTER(LANG(?filmTitle) = "en")
+        FILTER(REGEX(?filmTitle, "{safe_regex}", "i"))
+
+        OPTIONAL {{ 
+            ?film dbo:director ?dir . 
+            ?dir rdfs:label ?directorName . 
+            FILTER(LANG(?directorName)="en") 
+        }}
+        OPTIONAL {{ ?film dbo:thumbnail ?poster . }}
+        OPTIONAL {{ 
+            ?film dbo:abstract ?abstract . 
+            FILTER(LANG(?abstract)="en") 
+        }}
+        
+        BIND(STR(?film) as ?uri)
+    }}
+    LIMIT 1
+    """
+    
+    sparql = SPARQLWrapper(DBPEDIA_ENDPOINT)
+    sparql.setQuery(query)
+    sparql.setReturnFormat(JSON)
+    sparql.setTimeout(5) # Lebih cepat karena query simple
+
+    try:
+        results = sparql.query().convert()
+        bindings = results["results"]["bindings"]
+        
+        if bindings:
+            data = bindings[0]
+            return {
+                "uri": data.get("uri", {}).get("value", ""),
+                "title": data.get("filmTitle", {}).get("value", ""),
+                "director": data.get("directorName", {}).get("value", "Tidak diketahui"),
+                # Tanggal dihapus
+                "poster": data.get("poster", {}).get("value", ""),
+                "abstract": data.get("abstract", {}).get("value", "")
+            }
+        return None
+    except Exception as e:
+        print(f"⚠️ DBpedia Error: {str(e)}")
+        return None

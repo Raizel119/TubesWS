@@ -246,6 +246,13 @@ def detail(id):
         else:
             print(f"❌ Data penulis tidak ditemukan di DBpedia")
 
+    film_dbpedia = None
+    if book["Judul"]:
+        print(f"🎬 Mencari adaptasi film untuk '{book['Judul']}'...")
+        film_dbpedia = queries.get_film_adaptation(book["Judul"], book["Penulis"])
+        if film_dbpedia:
+            print("✅ Film ditemukan:", film_dbpedia['title'])
+
     # Logika rekomendasi: Cari buku lain dengan penulis yang sama.
     more_books = []
     if book["Penulis"]:
@@ -258,6 +265,7 @@ def detail(id):
         "detail.html",
         book=book,
         author_dbpedia=author_dbpedia,  # 🌟 Kirim data DBpedia ke template
+        film_dbpedia=film_dbpedia,
         more_books=more_books,
         all_categories=load_categories(),
         nested_category_map=load_nested_map()

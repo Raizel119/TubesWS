@@ -1,5 +1,6 @@
 # queries.py
 from SPARQLWrapper import SPARQLWrapper, JSON
+import re
 
 PREFIX = """
 PREFIX bu: <http://buku.org/buku#>
@@ -277,14 +278,38 @@ def get_author_info_from_dbpedia(author_name):
 def get_film_adaptation(book_title, author_name):
     if not book_title: return None
     
-    clean_title = book_title.split('(')[0].strip()
-    words = clean_title.split()
-    search_term = " ".join(words[:3]) if len(words) > 3 else clean_title
+    # 1. Bersihkan Judul
+    search_term = ""
+    
+    # Cek dalam kurung dulu (prioritas judul asli)
+    match = re.search(r'\((.*?)\)', book_title)
+    if match:
+        candidate = match.group(1).strip()
+        blocklist = ["edisi", "cover", "terjemahan", "repubish", "hard", "soft", "bahasa", "new"]
+        if not any(word in candidate.lower() for word in blocklist):
+            search_term = candidate
+
+    # Jika tidak ada kurung, pakai judul utama
+    if not search_term:
+        clean = re.sub(r'#\d+', '', book_title) 
+        # Hapus simbol aneh
+        for char in [":", "-", ".", ",", "!", "?", "'", '"']:
+            clean = clean.replace(char, " ")
+        search_term = clean.strip()
+
+    # 2. Ambil Keyword
+    words = search_term.split()
+    if len(words) > 3:
+        final_keyword = " ".join(words[:3])
+    else:
+        final_keyword = " ".join(words)
         
-    safe_regex = search_term \
-        .replace(".", "[.]\\\\s*") \
-        .replace(" ", "\\\\s+") \
-        .replace('"', '\\"')
+    # 3. BUAT REGEX SAKTI (Spasi = Spasi atau Simbol)
+    # Mengubah "Hunger Games Mockingjay" menjadi "Hunger[\s\W]+Games[\s\W]+Mockingjay"
+    # Ini akan tembus ke "Hunger Games: Mockingjay"
+    safe_regex = final_keyword.strip().replace(" ", "[\\\\s\\\\W]+")
+
+    print(f"🎬 DEBUG FILM: Regex Akhir='{safe_regex}'")
 
     query = f"""
     PREFIX dbo: <http://dbpedia.org/ontology/>
@@ -295,11 +320,19 @@ def get_film_adaptation(book_title, author_name):
               rdfs:label ?filmTitle .
         
         FILTER(LANG(?filmTitle) = "en")
+        
         FILTER(REGEX(?filmTitle, "{safe_regex}", "i"))
 
-        OPTIONAL {{ ?film dbo:director ?dir . ?dir rdfs:label ?directorName . FILTER(LANG(?directorName)="en") }}
+        OPTIONAL {{ 
+            ?film dbo:director ?dir . 
+            ?dir rdfs:label ?directorName . 
+            FILTER(LANG(?directorName)="en") 
+        }}
         OPTIONAL {{ ?film dbo:thumbnail ?poster . }}
-        OPTIONAL {{ ?film dbo:abstract ?abstract . FILTER(LANG(?abstract)="en") }}
+        OPTIONAL {{ 
+            ?film dbo:abstract ?abstract . 
+            FILTER(LANG(?abstract)="en") 
+        }}
         
         BIND(STR(?film) as ?uri)
     }}
@@ -309,7 +342,7 @@ def get_film_adaptation(book_title, author_name):
     sparql = SPARQLWrapper(DBPEDIA_ENDPOINT)
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
-    sparql.setTimeout(5)
+    sparql.setTimeout(15) 
 
     try:
         results = sparql.query().convert()
@@ -326,5 +359,5 @@ def get_film_adaptation(book_title, author_name):
             }
         return None
     except Exception as e:
-        print(f"⚠️ DBpedia Error: {str(e)}")
+        print(f"⚠️ DBpedia Film Error: {str(e)}")
         return None

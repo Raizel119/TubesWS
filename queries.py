@@ -33,6 +33,7 @@ ORDER BY ?cat ?sub1 ?sub2 ?sub3
 def get_page_filter_clause(page_range):
     """
     Menghasilkan klausa FILTER SPARQL untuk rentang halaman buku.
+    Logika: Membandingkan nilai integer ?Halaman.
     """
     if page_range == "0-100":
         return "FILTER(xsd:integer(?Halaman) <= 100)"
@@ -45,44 +46,45 @@ def get_page_filter_clause(page_range):
 def build_filter_string(search_query, current_filter, current_lang, page_range):
     """
     Menyusun klausa FILTER dinamis berdasarkan input user.
-    Menggunakan teknik Slicing String untuk memisahkan prefix kategori agar akurat.
     """
-    # Membersihkan input search dari simbol pengganggu (Dot-insensitive logic)
+    # Menghapus titik dan kutip dari input user agar pencarian lebih fleksibel
     clean_sq = search_query.replace('"', '').replace('.', '').strip()
     
     filter_clauses = []
     
-    # 1. Filter Kategori Hierarkis
-    # Menggunakan slicing [x:] untuk menghapus prefix (cat_, sub_, dll) tanpa merusak isi string
+    # [FILTER KATEGORI]
+    # Menggunakan teknik Slicing [x:] untuk membuang prefix (cat_, sub_)
+    # tanpa merusak isi string (seperti subsub_ yang mengandung kata 'sub')
     if current_filter:
         if current_filter.startswith("cat_"):
-            val = current_filter[4:] 
+            val = current_filter[4:] # Hapus "cat_"
             filter_clauses.append(f'?b bu:KategoriUtama "{val}" .')
             
         elif current_filter.startswith("subsub_"):
-            val = current_filter[7:] 
+            val = current_filter[7:] # Hapus "subsub_"
             filter_clauses.append(f'?b bu:Subkategori2 "{val}" .')
             
         elif current_filter.startswith("sub3_"):
-            val = current_filter[5:] 
+            val = current_filter[5:] # Hapus "sub3_"
             filter_clauses.append(f'?b bu:Subkategori3 "{val}" .')
             
         elif current_filter.startswith("sub_"):
-            val = current_filter[4:] 
-            # Pencarian Subkategori Level 1 mencakup kolom Sub1, Sub2, dan Sub3
+            val = current_filter[4:] # Hapus "sub_"
+            # Pencarian Subkategori Level 1 diperluas ke kolom Sub1, Sub2, dan Sub3
             filter_clauses.append(f'FILTER(?Sub1 = "{val}" || ?Sub2 = "{val}" || ?Sub3 = "{val}")')
 
-    # 2. Filter Bahasa
+    # Filter Bahasa
     if current_lang != "all":
         filter_clauses.append(f'?b bu:Bahasa "{current_lang}" .')
 
-    # 3. Filter Jumlah Halaman
+    # Filter Halaman
     page_clause = get_page_filter_clause(page_range)
     if page_clause:
         filter_clauses.append(page_clause)
 
-    # 4. Filter Pencarian Teks (Judul atau Penulis)
-    # Menggunakan REPLACE(..., "[.]", "") untuk mengabaikan titik pada database saat pencarian
+    # [SEARCH TEXT]
+    # Menggunakan REPLACE(..., "[.]", "") di dalam SPARQL:
+    # Ini menghapus titik di dalam DB sebelum dicocokkan.
     if clean_sq:
         search_clause = f'''
         FILTER(
@@ -104,6 +106,7 @@ def get_book_detail_query(book_id):
             ?Panjang ?Lebar ?Berat ?Format ?Deskripsi ?Gambar ?URL
     WHERE {{
         ?b rdf:type bu:Buku .
+        # Filter berdasarkan ID yang ada di ujung URI (setelah tanda #)
         FILTER(STRAFTER(STR(?b), "#") = "{book_id}")
 
         OPTIONAL {{ ?b bu:Judul ?Judul . }}
@@ -131,12 +134,19 @@ def get_book_detail_query(book_id):
 
 def get_books_query(filters_block, sort_option, limit=20, offset=0):
     """
-    Query utama untuk list buku dengan fitur Sorting harga dan tanggal (Year Extraction).
+    Query utama untuk list buku dengan fitur Sorting harga dan tanggal.
     """
+    # [SORTING HARGA]
+    # REPLACE pertama membuang 'Rp'.
+    # REPLACE kedua membuang titik separator ribuan (100.000 -> 100000).
+    # xsd:integer mengubah string jadi angka agar bisa diurutkan (bukan urutan abjad).
     if sort_option == "price_asc":
         order_clause = "ORDER BY xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', ''))"
     elif sort_option == "price_desc":
         order_clause = "ORDER BY DESC(xsd:integer(REPLACE(REPLACE(STR(?Harga), 'Rp', ''), '[.]', '')))"
+    
+    # [SORTING TANGGAL]
+    # Mengurutkan berdasarkan variabel ?extractedYear
     elif sort_option == "date_newest":
         order_clause = "ORDER BY DESC(?extractedYear)"
     elif sort_option == "date_oldest":
@@ -159,8 +169,12 @@ def get_books_query(filters_block, sort_option, limit=20, offset=0):
         OPTIONAL {{ ?b bu:Halaman ?Halaman . }}
         OPTIONAL {{ ?b bu:TanggalTerbit ?TanggalTerbit . }}
 
-        # Ekstraksi tahun (4 digit) dari string tanggal menggunakan Regex
+        # [EKSTRAKSI TAHUN]
+        # Regex ".*([0-9]{4}).*" mencari 4 digit angka berurutan di mana saja dalam string tanggal.
+        # $1 mengambil hanya 4 digit tersebut.
         BIND(xsd:integer(REPLACE(STR(?TanggalTerbit), ".*([0-9]{4}).*", "$1")) AS ?extractedYear)
+        
+        # Mengambil ID unik setelah tanda #
         BIND(STRAFTER(STR(?b), "#") AS ?id)
 
         {filters_block}
@@ -171,6 +185,9 @@ def get_books_query(filters_block, sort_option, limit=20, offset=0):
     """
 
 def get_total_count_query(filters_block):
+    """
+    Menghitung total buku untuk pagination.
+    """
     return f"""
     SELECT (COUNT(DISTINCT ?b) as ?count) WHERE {{
         ?b rdf:type bu:Buku .
@@ -187,7 +204,7 @@ def get_total_count_query(filters_block):
 
 def get_books_by_author_query(author_list, exclude_id, limit=6):
     """
-    Mencari buku lain berdasarkan list nama penulis (rekomendasi).
+    Mencari buku lain berdasarkan list nama penulis (untuk Rekomendasi).
     """
     filter_parts = []
     for name in author_list:
@@ -212,6 +229,7 @@ def get_books_by_author_query(author_list, exclude_id, limit=6):
         OPTIONAL {{ ?b bu:Gambar ?Gambar . }}
         
         BIND(STRAFTER(STR(?b), "#") AS ?id)
+        # Exclude buku yang sedang dibuka sekarang
         FILTER(?id != "{exclude_id}")
     }}
     LIMIT {limit}
@@ -220,18 +238,20 @@ def get_books_by_author_query(author_list, exclude_id, limit=6):
 def get_author_info_from_dbpedia(author_name):
     """
     Query Semantic Web ke DBpedia untuk mengambil biodata penulis.
-    Menggunakan UNION: Mencari berdasarkan Regex (nama mirip) ATAU menebak URI langsung.
     """
     if not author_name: return None
     clean_name = author_name.split(',')[0].strip()
     
-    # Membuat regex aman untuk pencarian teks
+    # [REGEX PENULIS]
+    # [.]? = Titik bersifat opsional.
+    # \\s+ = Spasi bersifat fleksibel (bisa 1 atau banyak).
     safe_regex = clean_name \
         .replace(".", "[.]\\\\s*") \
         .replace(" ", "\\\\s+") \
         .replace('"', '\\"')
     
-    # Menebak format URI DBpedia (spasi diganti underscore)
+    # [LOGIKA URI GUESSING]
+    # Mencoba menebak link langsung: "J.K. Rowling" -> "J.K._Rowling"
     uri_guess_name = clean_name.replace(" ", "_").replace('"', '')
 
     query = f"""
@@ -242,7 +262,7 @@ def get_author_info_from_dbpedia(author_name):
     
     SELECT DISTINCT ?author ?abstract ?birthDate ?deathDate ?thumbnail ?nationality WHERE {{
         {{
-            # Strategi 1: Regex Match pada label nama
+            # Strategi 1: Regex Match pada label nama (Paling fleksibel)
             ?author a dbo:Writer ;
                     rdfs:label ?name .
             FILTER(LANG(?name) = "en")
@@ -250,7 +270,7 @@ def get_author_info_from_dbpedia(author_name):
         }}
         UNION
         {{
-            # Strategi 2: Direct URI Construct
+            # Strategi 2: Direct URI Construct (Jika ejaan nama sangat akurat)
             BIND(URI(CONCAT("http://dbpedia.org/resource/", ENCODE_FOR_URI("{uri_guess_name}"))) AS ?author)
             ?author a dbo:Writer .
         }}
@@ -290,37 +310,42 @@ def get_author_info_from_dbpedia(author_name):
 def get_film_adaptation(book_title, author_name):
     """
     Mencari adaptasi film di DBpedia berdasarkan Judul Buku.
-    Fitur: Pembersihan judul otomatis & Regex 'Sakti' untuk menangani simbol (titik dua/dash).
+    Fitur: Pembersihan judul otomatis & Regex 'Sakti' untuk menangani simbol.
     """
     if not book_title: return None
     
     search_term = ""
     
-    # 1. Prioritas mengambil judul asli bahasa Inggris di dalam kurung (...)
+    # [LOGIKA PRIORITAS KURUNG]
+    # Cek apakah ada teks dalam kurung "()", misal: "Hunger Games #2 (Catching Fire)".
+    # Kita ambil "Catching Fire" karena biasanya itu judul asli Inggrisnya.
     match = re.search(r'\((.*?)\)', book_title)
     if match:
         candidate = match.group(1).strip()
-        # Filter kata-kata teknis yang bukan judul
+        # Filter: Pastikan yang diambil bukan info teknis seperti "Edisi Revisi"
         blocklist = ["edisi", "cover", "terjemahan", "repubish", "hard", "soft", "bahasa", "new"]
         if not any(word in candidate.lower() for word in blocklist):
             search_term = candidate
 
-    # 2. Jika tidak ada kurung, gunakan judul utama dengan pembersihan (hapus #1, #2, dll)
+    # [LOGIKA PEMBERSIHAN SIMBOL]
+    # Jika tidak ada kurung, gunakan judul utama tapi bersihkan simbol-simbol pengganggu.
     if not search_term:
-        clean = re.sub(r'#\d+', '', book_title) 
+        clean = re.sub(r'#\d+', '', book_title) # Hapus nomor seri "#1", "#2"
         for char in [":", "-", ".", ",", "!", "?", "'", '"']:
-            clean = clean.replace(char, " ")
+            clean = clean.replace(char, " ") # Ganti simbol dengan spasi
         search_term = clean.strip()
 
-    # 3. Ambil Keyword (Max 3 kata)
+    # Ambil Keyword (Max 3 kata pertama agar pencarian tidak terlalu ketat)
     words = search_term.split()
     if len(words) > 3:
         final_keyword = " ".join(words[:3])
     else:
         final_keyword = " ".join(words)
         
-    # 4. Konstruksi Regex: Mengubah spasi menjadi pola [\s\W]+
-    # Tujuannya agar cocok dengan judul film yang memiliki simbol pemisah (misal: "Hunger Games: Mockingjay")
+    # [LOGIKA REGEX SAKTI]
+    # .replace(" ", "[\\\\s\\\\W]+")
+    # Mengubah spasi biasa menjadi pola Regex: "Spasi ATAU Karakter Non-Huruf".
+    # Ini memungkinkan "Hunger Games Mockingjay" cocok dengan "Hunger Games: Mockingjay" (ada titik dua).
     safe_regex = final_keyword.strip().replace(" ", "[\\\\s\\\\W]+")
 
     print(f"🎬 DEBUG FILM: Regex Akhir='{safe_regex}'")
@@ -335,7 +360,7 @@ def get_film_adaptation(book_title, author_name):
         
         FILTER(LANG(?filmTitle) = "en")
         
-        # Pencarian Case Insensitive dengan Regex fleksibel
+        # Pencarian Case Insensitive ("i") dengan Regex fleksibel tadi
         FILTER(REGEX(?filmTitle, "{safe_regex}", "i"))
 
         OPTIONAL {{ 

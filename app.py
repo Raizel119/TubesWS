@@ -223,6 +223,8 @@ def detail(id):
     if not rows: abort(404)
 
     r = rows[0]
+    raw_deskripsi = r.get("Deskripsi", {}).get("value", "")
+    clean_deskripsi = raw_deskripsi.replace("_x000D_", "<br>")
     book = {
         "id": id,
         "Judul": r.get("Judul", {}).get("value", ""),
@@ -241,7 +243,7 @@ def detail(id):
         "Lebar": r.get("Lebar", {}).get("value", ""),
         "Berat": r.get("Berat", {}).get("value", ""),
         "Format": r.get("Format", {}).get("value", ""),
-        "Deskripsi": r.get("Deskripsi", {}).get("value", ""),
+        "Deskripsi": clean_deskripsi,
         "Gambar": r.get("Gambar", {}).get("value", "/static/img/cover.avif"),
         "URL": r.get("URL", {}).get("value", "#")
     }

@@ -95,7 +95,7 @@
                 <h4>Deskripsi</h4>
                 <div class="detail-description">
                     {% if book.Deskripsi and book.Deskripsi != 'Tidak ditemukan' %}
-                        {{ book.Deskripsi }}
+                        {{ book.Deskripsi | safe}}
                     {% else %}
                         <p>Tidak ada deskripsi untuk buku ini.</p>
                     {% endif %}

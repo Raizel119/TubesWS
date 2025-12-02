@@ -34,7 +34,6 @@
         #load-more-container {
             text-align: center;
             margin: 30px 0 50px 0;
-            display: none; 
         }
         .btn-load-more {
             background-color: transparent;
@@ -51,6 +50,10 @@
             background-color: #A695FF;
             color: #fff;
             box-shadow: 0 4px 10px rgba(166, 149, 255, 0.3);
+        }
+        .btn-load-more:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
     </style>
 </head>
@@ -222,13 +225,13 @@
                             </form>
                             
                        <div class="search-history" id="search-history-dropdown">
-        <div class="history-header">
-            <h3>Riwayat Pencarian</h3>
-            <button type="button" class="clear-history-btn" id="clear-history">Hapus Semua</button>
-        </div>
-        <ul class="history-list" id="history-list"></ul>
-    </div>
-</div>
+                            <div class="history-header">
+                                <h3>Riwayat Pencarian</h3>
+                                <button type="button" class="clear-history-btn" id="clear-history">Hapus Semua</button>
+                            </div>
+                            <ul class="history-list" id="history-list"></ul>
+                        </div>
+                    </div>
 
                         <button type="button" id="open-filter-btn" class="btn-filter-trigger">
                             <i class="fas fa-sliders-h"></i> Filter & Urutkan
@@ -292,14 +295,17 @@
                             </div>
                         {% endfor %}
                     </div>
-
-                    <div id="loading-indicator" style="text-align: center; padding: 20px; display: none; color: #666;">
-                        <i class="fas fa-spinner fa-spin"></i> Memuat...
-                    </div>
                     
+                    {% if total_count > books|length %}
                     <div id="load-more-container">
-                        <button id="load-more-btn" class="btn-load-more">Muat Lebih Banyak</button>
+                        <button id="load-more-btn" class="btn-load-more" data-offset="20" data-total="{{ total_count }}">
+                            Muat Lebih Banyak
+                        </button>
+                        <p id="no-more-text" style="display: none; color: #888; margin-top: 10px; font-size: 0.9em;">
+                            Semua buku sudah ditampilkan.
+                        </p>
                     </div>
+                    {% endif %}
 
                 {% else %}
                     {% for category, books in grouped_books.items() %}
@@ -342,7 +348,6 @@
         <div class="footer-top">
             <div class="footer-logo">
                 <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Bookara" />
-               
             </div>
             <div class="footer-tagline">Search Smarter. Read Better.</div>
         </div>
@@ -414,6 +419,7 @@
                             </label>
                         </div>
                     </div>
+                    
                     <div class="filter-group-modal">
                         <h4>Bahasa</h4>
                         <div class="radio-grid">
@@ -424,11 +430,20 @@
                             {% for lang in all_languages %}
                             <label class="modal-radio">
                                 <input type="radio" name="lang" value="{{ lang }}" {% if current_lang == lang %}checked{% endif %}>
-                                <span>{{ lang }}</span>
+                                <span>
+                                    {% if lang == 'English' %}
+                                        Inggris
+                                    {% elif lang == '-' %}
+                                        Lainnya
+                                    {% else %}
+                                        {{ lang }}
+                                    {% endif %}
+                                </span>
                             </label>
                             {% endfor %}
                         </div>
                     </div>
+
                     <div class="filter-group-modal">
                         <h4>Jumlah Halaman</h4>
                         <div class="radio-list">
@@ -578,62 +593,80 @@
             });
         }
 
-        // LOAD MORE BUTTON LOGIC
-        let offset = 20; const limit = 20; let isLoading = false; let hasMore = true; 
-        const container = document.getElementById('books-container');
-        const loader = document.getElementById('loading-indicator');
+        // ==========================================
+        // SMART LOAD MORE LOGIC (JavaScript Side)
+        // ==========================================
         const loadMoreBtn = document.getElementById('load-more-btn');
-        const loadMoreContainer = document.getElementById('load-more-container');
+        const noMoreText = document.getElementById('no-more-text');
+        const container = document.getElementById('books-container');
 
-        if (loadMoreContainer && container) {
-            loadMoreContainer.style.display = 'block';
+        if (loadMoreBtn && container) {
+            loadMoreBtn.addEventListener('click', function() {
+                // 1. Ambil data dari atribut tombol
+                let currentOffset = parseInt(this.getAttribute('data-offset'));
+                let totalBooks = parseInt(this.getAttribute('data-total'));
+                
+                // 2. Ambil filter dari URL
+                const params = new URLSearchParams(window.location.search);
+                
+                // 3. UI Loading state
+                const originalText = this.innerText;
+                this.innerText = 'Memuat...';
+                this.disabled = true;
 
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            async function loadMoreBooks() {
-                if (isLoading || !hasMore) return;
-                isLoading = true; 
-                if(loader) loader.style.display = 'block';
-                if(loadMoreBtn) loadMoreBtn.style.display = 'none'; 
+                // 4. Update offset di params fetch
+                params.set('offset', currentOffset);
 
-                urlParams.set('offset', offset);
-                try {
-                    const response = await fetch(`/api/load-more?${urlParams.toString()}`);
-                    const newBooks = await response.json();
-                    
-                    if (newBooks.length === 0) { 
-                        hasMore = false; 
-                        if(loader) loader.style.display = 'none';
-                        if(loadMoreContainer) loadMoreContainer.style.display = 'none';
-                        return; 
-                    }
+                // 5. Fetch Data
+                fetch(`/api/load-more?${params.toString()}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            // Render buku
+                            data.forEach(book => {
+                                const card = document.createElement('div'); 
+                                card.className = 'book-card-small';
+                                let imgHtml = (book.Gambar && book.Gambar !== 'Tidak ditemukan' && book.Gambar.length > 5) 
+                                    ? `<img src="${book.Gambar}" alt="${book.Judul}" onerror="this.onerror=null; this.src='/static/img/placeholder.jpg';">` 
+                                    : `<img src="/static/img/placeholder.jpg" alt="Gambar Tidak Tersedia">`;
+                                
+                                card.innerHTML = `
+                                    <a href="/book/${book.id}" class="card-link">
+                                        <div class="card-image">${imgHtml}</div>
+                                        <div class="card-content">
+                                            <p class="author">${book.Penulis || ''}</p>
+                                            <h5 class="title">${book.Judul}</h5>
+                                            ${book.Harga ? `<p class="price" style="font-weight:700; font-size:0.9em; color:#A695FF;">${book.Harga}</p>` : ''}
+                                        </div>
+                                    </a>`;
+                                container.appendChild(card);
+                            });
 
-                    newBooks.forEach(book => {
-                        const card = document.createElement('div'); card.className = 'book-card-small';
-                        let imgHtml = (book.Gambar && book.Gambar !== 'Tidak ditemukan' && book.Gambar.length > 5) ? `<img src="${book.Gambar}" alt="${book.Judul}" onerror="this.onerror=null; this.src='/static/img/placeholder.jpg';">` : `<img src="/static/img/placeholder.jpg" alt="Gambar Tidak Tersedia">`;
-                        card.innerHTML = `<a href="/book/${book.id}" class="card-link"><div class="card-image">${imgHtml}</div><div class="card-content"><p class="author">${book.Penulis || ''}</p><h5 class="title">${book.Judul}</h5>${book.Harga ? `<p class="price" style="font-weight:700; font-size:0.9em; color:#A695FF;">${book.Harga}</p>` : ''}</div></a>`;
-                        container.appendChild(card);
+                            // 6. Hitung Offset Baru
+                            const newOffset = currentOffset + 20;
+                            loadMoreBtn.setAttribute('data-offset', newOffset);
+
+                            // 7. Cek apakah sudah habis?
+                            // Jika offset baru melebihi total, ATAU data yg dikembalikan kurang dari limit
+                            if (newOffset >= totalBooks || data.length < 20) {
+                                loadMoreBtn.style.display = 'none';
+                                if (noMoreText) noMoreText.style.display = 'block';
+                            } else {
+                                loadMoreBtn.innerText = originalText;
+                                loadMoreBtn.disabled = false;
+                            }
+                        } else {
+                            // Data kosong (Safety net)
+                            loadMoreBtn.style.display = 'none';
+                            if (noMoreText) noMoreText.style.display = 'block';
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Error:', err);
+                        loadMoreBtn.innerText = 'Gagal. Coba lagi.';
+                        loadMoreBtn.disabled = false;
                     });
-                    
-                    offset += limit; 
-                    
-                    if (newBooks.length < limit) {
-                        hasMore = false;
-                        if(loadMoreContainer) loadMoreContainer.style.display = 'none';
-                    }
-
-                } catch (error) { 
-                    console.error('Gagal memuat:', error); 
-                } finally { 
-                    isLoading = false; 
-                    if(loader) loader.style.display = 'none';
-                    if(hasMore && loadMoreBtn) loadMoreBtn.style.display = 'inline-block';
-                }
-            }
-            
-            if(loadMoreBtn) {
-                loadMoreBtn.addEventListener('click', loadMoreBooks);
-            }
+            });
         }
 
         // STICKY NAVBAR LOGIC

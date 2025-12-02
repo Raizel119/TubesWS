@@ -1,6 +1,9 @@
+# app.py
 from flask import Flask, render_template, request, abort, jsonify
 from SPARQLWrapper import SPARQLWrapper, JSON
 from urllib.parse import quote, unquote
+from collections import defaultdict
+from functools import lru_cache # Import untuk caching
 import re
 import queries 
 
@@ -20,7 +23,7 @@ FUSEKI_URL = "http://localhost:3030/bookara/query"
 
 def run_query(query_string):
     """
-    Mengirim query SPARQL mentah ke server Fuseki dan mengembalikan hasil dalam format JSON bindings.
+    Mengirim query SPARQL mentah ke server Fuseki.
     """
     sparql = SPARQLWrapper(FUSEKI_URL)
     sparql.setQuery(queries.PREFIX + "\n" + query_string)
@@ -48,20 +51,20 @@ def map_book_row(row):
         "Gambar": gambar if gambar else ""
     }
 
+# --- OPTIMASI 1: CACHING SIDEBAR ---
+# Data kategori/bahasa jarang berubah. Kita cache agar tidak query berulang-ulang.
+@lru_cache(maxsize=1)
 def load_categories():
     rows = run_query(queries.GET_ALL_CATEGORIES)
     return [r["cat"]["value"] for r in rows]
 
+@lru_cache(maxsize=1)
 def load_languages():
     rows = run_query(queries.GET_ALL_LANGUAGES)
     return [r["lang"]["value"] for r in rows]
 
+@lru_cache(maxsize=1)
 def load_nested_map():
-    """
-    Membangun struktur hierarki kategori untuk Sidebar:
-    Kategori -> Sub1 -> Sub2 -> Sub3.
-    Membersihkan data yang bernilai null atau 'tidak ditemukan' dari graph.
-    """
     rows = run_query(queries.GET_NESTED_MAP)
     nested = {}
 
@@ -86,16 +89,11 @@ def load_nested_map():
                 if sub3 and sub3 not in nested[cat][sub1][sub2]:
                     nested[cat][sub1][sub2].append(sub3)
     return nested
+# -----------------------------------
 
 def get_books(search_query="", current_filter="", current_lang="all",
                 page_range="all", sort_option="price_asc",
                 limit=20, offset=0):
-    """
-    Fungsi orkestrator pencarian buku:
-    1. Meminta queries.py membuat string FILTER berdasarkan input user.
-    2. Meminta queries.py membuat query utama digabung dengan sorting/limit.
-    3. Menjalankan query dan memapping hasilnya.
-    """
     filters_block = queries.build_filter_string(
         search_query, current_filter, current_lang, page_range
     )
@@ -116,21 +114,16 @@ def build_active_filters(current_filter, current_lang, search_query, page_range,
     supaya user bisa melihat apa yang sedang mereka filter (Search Breadcrumbs).
     """
     active = []
-
     if search_query:
         active.append({"key": "query", "value": f'"{search_query}"'})
-
     if current_filter:
         # Menghapus prefix teknis (cat_, sub_) untuk tampilan user
         clean = re.sub(r'^(cat_|sub_|subsub_|sub3_)', '', current_filter)
         active.append({"key": "filter", "value": unquote(clean)})
-
     if current_lang and current_lang != "all":
         active.append({"key": "lang", "value": current_lang})
-
     if page_range and page_range != "all":
         active.append({"key": "page_range", "value": f"{page_range} Hal"})
-
     if sort_option:
         labels = {
             "date_newest": "Terbaru", "date_oldest": "Terlama",
@@ -138,7 +131,6 @@ def build_active_filters(current_filter, current_lang, search_query, page_range,
         }
         if sort_option in labels:
             active.append({"key": "sort", "value": labels[sort_option]})
-
     return active
 
 @app.route("/")
@@ -150,37 +142,45 @@ def index():
     sort_option = request.args.get("sort", "price_asc")
     page_range = request.args.get("page_range", "all")
 
-    # Ambil data utama
+    # Ambil data utama (untuk list view)
     books = get_books(search_query, current_filter, current_lang, page_range, sort_option, limit=20)
     total_count = get_total_books_count(search_query, current_filter, current_lang, page_range)
 
-    # Cek kondisi "Home Bersih" (tanpa filter aktif) untuk menampilkan rak kategori
+    # Cek apakah sedang di Home bersih
     is_clean_home = not (
         search_query or current_filter or current_lang != 'all'
         or page_range != 'all' or sort_option != 'price_asc'
     )
 
-    grouped_books = {}
+    grouped_books = defaultdict(list)
+    # Gunakan load_categories yang sudah di-cache (lebih cepat)
     all_categories = load_categories()
 
     if is_clean_home:
-        # Jika di home, ambil preview 10 buku untuk setiap kategori utama
-        for category_name in all_categories:
-            books_in_cat = get_books(
-                current_filter=f"cat_{category_name}", 
-                sort_option="price_asc", 
-                limit=10
-            )
-            if books_in_cat:
-                grouped_books[category_name] = books_in_cat
+        # --- OPTIMASI 2: EAGER LOADING (PYTHON GROUPING) ---
+        # Daripada request ke DB 20 kali (1 kali per kategori),
+        # Kita request 1 kali saja untuk ambil BANYAK data (misal 500 buku),
+        # Lalu kita sortir manual di Python. Jauh lebih cepat (mengurangi HTTP Round-trip).
+        
+        # Ambil 500 buku acak/terbaru (tanpa filter)
+        raw_home_books = get_books(limit=500, sort_option="date_newest") 
+        
+        for b in raw_home_books:
+            cat = b.get('KategoriUtama')
+            # Hanya masukkan jika kategori valid dan belum penuh (max 10 buku per rak)
+            if cat and cat in all_categories and len(grouped_books[cat]) < 10:
+                grouped_books[cat].append(b)
+        
+        # Konversi defaultdict ke dict biasa agar template tidak bingung
+        grouped_books = dict(grouped_books)
 
     return render_template(
         "index.html",
         books=books,
         grouped_books=grouped_books,
         all_categories=all_categories,
-        all_languages=load_languages(),
-        nested_category_map=load_nested_map(),
+        all_languages=load_languages(), # Ini juga sekarang cached
+        nested_category_map=load_nested_map(), # Ini juga cached
         total_count=total_count,
         results_count=len(books),
         current_filter=current_filter,
@@ -206,12 +206,11 @@ def load_more():
 
 @app.route("/book/<id>")
 def detail(id):
-    # Query detail buku spesifik dari Fuseki lokal
+    # Detail buku sudah cukup eager (menarik semua properti dalam 1 query)
     rows = run_query(queries.get_book_detail_query(id))
     if not rows: abort(404)
 
     r = rows[0]
-    # Mapping manual field detail yang lebih lengkap dibanding list view
     book = {
         "id": id,
         "Judul": r.get("Judul", {}).get("value", ""),
@@ -235,25 +234,19 @@ def detail(id):
         "URL": r.get("URL", {}).get("value", "#")
     }
 
-    # 🌟 FITUR BARU: Ambil data penulis dari DBpedia
+    # Info Penulis dari DBpedia
     author_dbpedia = None
     if book["Penulis"]:
         print(f"🔍 Mencari info penulis '{book['Penulis']}' di DBpedia...")
         author_dbpedia = queries.get_author_info_from_dbpedia(book["Penulis"])
-        
-        if author_dbpedia:
-            print(f"✅ Data penulis ditemukan di DBpedia!")
-        else:
-            print(f"❌ Data penulis tidak ditemukan di DBpedia")
 
+    # Info Film
     film_dbpedia = None
     if book["Judul"]:
         print(f"🎬 Mencari adaptasi film untuk '{book['Judul']}'...")
         film_dbpedia = queries.get_film_adaptation(book["Judul"], book["Penulis"])
-        if film_dbpedia:
-            print("✅ Film ditemukan:", film_dbpedia['title'])
 
-    # Logika rekomendasi: Cari buku lain dengan penulis yang sama.
+    # Rekomendasi
     more_books = []
     if book["Penulis"]:
         author_list = [name.strip() for name in book["Penulis"].split(',') if name.strip()]
@@ -264,9 +257,10 @@ def detail(id):
     return render_template(
         "detail.html",
         book=book,
-        author_dbpedia=author_dbpedia,  # 🌟 Kirim data DBpedia ke template
+        author_dbpedia=author_dbpedia,
         film_dbpedia=film_dbpedia,
         more_books=more_books,
+        # Menggunakan fungsi cached agar loading detail page juga lebih cepat
         all_categories=load_categories(),
         nested_category_map=load_nested_map()
     )

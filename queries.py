@@ -43,9 +43,39 @@ def get_page_filter_clause(page_range):
         return "FILTER(xsd:integer(?Halaman) > 200)"
     return ""
 
+def create_fuzzy_regex(text):
+    """
+    Membuat pola Regex untuk menangani typo double huruf.
+    Contoh Input: "Harrry Poter"
+    
+    1. Collapse: "Hary Poter" (Hapus huruf ganda berurutan di input)
+    2. Expand: "H+a+r+y+.*P+o+t+e+r+"
+    
+    Hasil: Akan cocok dengan "Harry Potter", "Hary Potter", "Harry Potttter".
+    """
+    if not text: return ""
+    
+    # Bersihkan simbol selain angka/huruf/spasi agar regex tidak error
+    clean_text = re.sub(r'[^a-zA-Z0-9\s]', '', text)
+    words = clean_text.split()
+    
+    fuzzy_parts = []
+    for word in words:
+        # Langkah 1: Collapse huruf ganda user (User ngetik 'Harrry' -> jadi 'Hary')
+        # \1+ artinya: karakter yang sama muncul berulang
+        skeleton = re.sub(r'(.)\1+', r'\1', word)
+        
+        # Langkah 2: Tambahkan + setelah setiap huruf (h+a+r+y+)
+        # re.escape memastikan jika ada simbol regex (seperti titik) dianggap teks biasa
+        fuzzy_word = "".join([re.escape(char) + "+" for char in skeleton])
+        fuzzy_parts.append(fuzzy_word)
+    
+    # Gabungkan kata dengan .* (wildcard) agar spasi fleksibel
+    return ".*".join(fuzzy_parts)
+
 def build_filter_string(search_query, current_filter, current_lang, page_range):
     """
-    Menyusun klausa FILTER dinamis.\
+    Menyusun klausa FILTER dinamis.
     """
     clean_sq = search_query.replace('"', '').replace('.', '').strip()
     
@@ -105,10 +135,11 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
 
     # Search Text
     if clean_sq:
+        fuzzy_pattern = create_fuzzy_regex(clean_sq)
         search_clause = f'''
         FILTER(
-            CONTAINS(LCASE(REPLACE(?Judul, "[.]", "")), LCASE("{clean_sq}")) ||
-            CONTAINS(LCASE(REPLACE(?Penulis, "[.]", "")), LCASE("{clean_sq}"))
+            REGEX(REPLACE(?Judul, "[.]", ""), "{fuzzy_pattern}", "i") ||
+            REGEX(REPLACE(?Penulis, "[.]", ""), "{fuzzy_pattern}", "i")
         )
         '''
         filter_clauses.append(search_clause)

@@ -45,33 +45,54 @@ def get_page_filter_clause(page_range):
 
 def build_filter_string(search_query, current_filter, current_lang, page_range):
     """
-    Menyusun klausa FILTER dinamis berdasarkan input user.
+    Menyusun klausa FILTER dinamis.\
     """
-    # Menghapus titik dan kutip dari input user agar pencarian lebih fleksibel
     clean_sq = search_query.replace('"', '').replace('.', '').strip()
     
     filter_clauses = []
     
-    # [FILTER KATEGORI]
-    # Menggunakan teknik Slicing [x:] untuk membuang prefix (cat_, sub_)
-    # tanpa merusak isi string (seperti subsub_ yang mengandung kata 'sub')
+    # [FILTER KATEGORI STRICT]
+    # Kita pecah value berdasarkan tanda pipa '|'
     if current_filter:
         if current_filter.startswith("cat_"):
-            val = current_filter[4:] # Hapus "cat_"
+            # Format: cat_Buku
+            val = current_filter[4:] 
             filter_clauses.append(f'?b bu:KategoriUtama "{val}" .')
             
+        elif current_filter.startswith("sub_"):
+            # Format: sub_Buku|Agama
+            raw = current_filter[4:]
+            parts = raw.split('|')
+            if len(parts) >= 2:
+                filter_clauses.append(f'?b bu:KategoriUtama "{parts[0]}" .')
+                filter_clauses.append(f'?b bu:Subkategori1 "{parts[1]}" .')
+            else:
+                # Fallback jika format lama/error
+                filter_clauses.append(f'?b bu:Subkategori1 "{raw}" .')
+
         elif current_filter.startswith("subsub_"):
-            val = current_filter[7:] # Hapus "subsub_"
-            filter_clauses.append(f'?b bu:Subkategori2 "{val}" .')
+            # Format: subsub_Buku|Agama|Lainnya
+            # Ini yang memperbaiki bug "Lainnya" nyampur
+            raw = current_filter[7:]
+            parts = raw.split('|')
+            if len(parts) >= 3:
+                filter_clauses.append(f'?b bu:KategoriUtama "{parts[0]}" .')
+                filter_clauses.append(f'?b bu:Subkategori1 "{parts[1]}" .')
+                filter_clauses.append(f'?b bu:Subkategori2 "{parts[2]}" .')
+            else:
+                filter_clauses.append(f'?b bu:Subkategori2 "{raw}" .')
             
         elif current_filter.startswith("sub3_"):
-            val = current_filter[5:] # Hapus "sub3_"
-            filter_clauses.append(f'?b bu:Subkategori3 "{val}" .')
-            
-        elif current_filter.startswith("sub_"):
-            val = current_filter[4:] # Hapus "sub_"
-            # Pencarian Subkategori Level 1 diperluas ke kolom Sub1, Sub2, dan Sub3
-            filter_clauses.append(f'FILTER(?Sub1 = "{val}" || ?Sub2 = "{val}" || ?Sub3 = "{val}")')
+            # Format: sub3_Buku|Agama|Lainnya|Islam
+            raw = current_filter[5:]
+            parts = raw.split('|')
+            if len(parts) >= 4:
+                filter_clauses.append(f'?b bu:KategoriUtama "{parts[0]}" .')
+                filter_clauses.append(f'?b bu:Subkategori1 "{parts[1]}" .')
+                filter_clauses.append(f'?b bu:Subkategori2 "{parts[2]}" .')
+                filter_clauses.append(f'?b bu:Subkategori3 "{parts[3]}" .')
+            else:
+                filter_clauses.append(f'?b bu:Subkategori3 "{raw}" .')
 
     # Filter Bahasa
     if current_lang != "all":
@@ -82,9 +103,7 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
     if page_clause:
         filter_clauses.append(page_clause)
 
-    # [SEARCH TEXT]
-    # Menggunakan REPLACE(..., "[.]", "") di dalam SPARQL:
-    # Ini menghapus titik di dalam DB sebelum dicocokkan.
+    # Search Text
     if clean_sq:
         search_clause = f'''
         FILTER(
@@ -262,7 +281,7 @@ def get_author_info_from_dbpedia(author_name):
     
     SELECT DISTINCT ?author ?abstract ?birthDate ?deathDate ?thumbnail ?nationality WHERE {{
         {{
-            # Strategi 1: Regex Match pada label nama (Paling fleksibel)
+            # Regex Match pada label nama (Paling fleksibel)
             ?author a dbo:Writer ;
                     rdfs:label ?name .
             FILTER(LANG(?name) = "en")
@@ -270,7 +289,7 @@ def get_author_info_from_dbpedia(author_name):
         }}
         UNION
         {{
-            # Strategi 2: Direct URI Construct (Jika ejaan nama sangat akurat)
+            # Direct URI Construct (Jika ejaan nama sangat akurat)
             BIND(URI(CONCAT("http://dbpedia.org/resource/", ENCODE_FOR_URI("{uri_guess_name}"))) AS ?author)
             ?author a dbo:Writer .
         }}
@@ -342,7 +361,7 @@ def get_film_adaptation(book_title, author_name):
     else:
         final_keyword = " ".join(words)
         
-    # [LOGIKA REGEX SAKTI]
+    # [LOGIKA REGEX]
     # .replace(" ", "[\\\\s\\\\W]+")
     # Mengubah spasi biasa menjadi pola Regex: "Spasi ATAU Karakter Non-Huruf".
     # Ini memungkinkan "Hunger Games Mockingjay" cocok dengan "Hunger Games: Mockingjay" (ada titik dua).

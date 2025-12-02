@@ -155,8 +155,8 @@
                                 {% for sub1, sub2_map in sub1_map.items() %}
                                 <li>
                                     <div class="cat-item">
-                                        <a href="/?filter=sub_{{ sub1 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
-                                           class="{{ 'active' if current_filter == 'sub_' ~ sub1 else '' }}" onclick="showLoader()">
+                                        <a href="/?filter=sub_{{ cat | uquote }}|{{ sub1 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                           class="{{ 'active' if current_filter == 'sub_' ~ cat ~ '|' ~ sub1 else '' }}" onclick="showLoader()">
                                             {{ sub1 }}
                                         </a>
                                         {% if sub2_map %}
@@ -169,8 +169,8 @@
                                         {% for sub2, sub3_list in sub2_map.items() %}
                                         <li>
                                             <div class="cat-item">
-                                                <a href="/?filter=subsub_{{ sub2 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
-                                                   class="{{ 'active' if current_filter == 'subsub_' ~ sub2 else '' }}" onclick="showLoader()">
+                                                <a href="/?filter=subsub_{{ cat | uquote }}|{{ sub1 | uquote }}|{{ sub2 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                                   class="{{ 'active' if current_filter == 'subsub_' ~ cat ~ '|' ~ sub1 ~ '|' ~ sub2 else '' }}" onclick="showLoader()">
                                                     {{ sub2 }}
                                                 </a>
                                                 {% if sub3_list %}
@@ -182,8 +182,8 @@
                                             <ul class="submenu">
                                                 {% for sub3 in sub3_list %}
                                                 <li>
-                                                    <a href="/?filter=sub3_{{ sub3 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
-                                                       class="leaf-link {{ 'active' if current_filter == 'sub3_' ~ sub3 else '' }}" onclick="showLoader()">
+                                                    <a href="/?filter=sub3_{{ cat | uquote }}|{{ sub1 | uquote }}|{{ sub2 | uquote }}|{{ sub3 | uquote }}&query={{ search_query or '' }}&lang={{ current_lang or 'all' }}&page_range={{ page_range or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                                       class="leaf-link {{ 'active' if current_filter == 'sub3_' ~ cat ~ '|' ~ sub1 ~ '|' ~ sub2 ~ '|' ~ sub3 else '' }}" onclick="showLoader()">
                                                         - {{ sub3 }}
                                                     </a>
                                                 </li>

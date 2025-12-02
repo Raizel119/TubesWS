@@ -109,21 +109,32 @@ def get_total_books_count(search_query="", current_filter="", current_lang="all"
     return 0
 
 def build_active_filters(current_filter, current_lang, search_query, page_range, sort_option):
-    """
-    Helper untuk UI: Membuat list 'tags' filter yang sedang aktif
-    supaya user bisa melihat apa yang sedang mereka filter (Search Breadcrumbs).
-    """
     active = []
     if search_query:
         active.append({"key": "query", "value": f'"{search_query}"'})
+        
     if current_filter:
-        # Menghapus prefix teknis (cat_, sub_) untuk tampilan user
+        # Hapus prefix teknis
         clean = re.sub(r'^(cat_|sub_|subsub_|sub3_)', '', current_filter)
-        active.append({"key": "filter", "value": unquote(clean)})
+        decoded = unquote(clean)
+        
+        # FIX TAMPILAN: Jika ada pipa '|', ambil bagian paling terakhir saja untuk ditampilkan
+        # Contoh: "Buku|Agama|Lainnya" -> Tampilkan "Lainnya"
+        display_label = decoded.split('|')[-1]
+        
+        active.append({"key": "filter", "value": display_label})
+
     if current_lang and current_lang != "all":
-        active.append({"key": "lang", "value": current_lang})
+        # Ubah label bahasa untuk UI jika English -> Inggris
+        lang_label = current_lang
+        if current_lang == "English": lang_label = "Inggris"
+        elif current_lang == "Indonesian": lang_label = "Indonesia"
+        
+        active.append({"key": "lang", "value": lang_label})
+
     if page_range and page_range != "all":
         active.append({"key": "page_range", "value": f"{page_range} Hal"})
+
     if sort_option:
         labels = {
             "date_newest": "Terbaru", "date_oldest": "Terlama",
@@ -131,6 +142,7 @@ def build_active_filters(current_filter, current_lang, search_query, page_range,
         }
         if sort_option in labels:
             active.append({"key": "sort", "value": labels[sort_option]})
+            
     return active
 
 @app.route("/")

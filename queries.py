@@ -50,8 +50,6 @@ def create_fuzzy_regex(text):
     
     1. Collapse: "Hary Poter" (Hapus huruf ganda berurutan di input)
     2. Expand: "H+a+r+y+.*P+o+t+e+r+"
-    
-    Hasil: Akan cocok dengan "Harry Potter", "Hary Potter", "Harry Potttter".
     """
     if not text: return ""
     
@@ -61,16 +59,16 @@ def create_fuzzy_regex(text):
     
     fuzzy_parts = []
     for word in words:
-        # Langkah 1: Collapse huruf ganda user (User ngetik 'Harrry' -> jadi 'Hary')
+        # Collapse huruf ganda user (User ngetik 'Harrry' -> jadi 'Hary')
         # \1+ artinya: karakter yang sama muncul berulang
         skeleton = re.sub(r'(.)\1+', r'\1', word)
         
-        # Langkah 2: Tambahkan + setelah setiap huruf (h+a+r+y+)
+        # Tambahkan + setelah setiap huruf (h+a+r+y+)
         # re.escape memastikan jika ada simbol regex (seperti titik) dianggap teks biasa
         fuzzy_word = "".join([re.escape(char) + "+" for char in skeleton])
         fuzzy_parts.append(fuzzy_word)
     
-    # Gabungkan kata dengan .* (wildcard) agar spasi fleksibel
+    # Gabungkan kata dengan .* agar spasi fleksibel
     return ".*".join(fuzzy_parts)
 
 def build_filter_string(search_query, current_filter, current_lang, page_range):
@@ -82,7 +80,7 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
     filter_clauses = []
     
     # [FILTER KATEGORI STRICT]
-    # Kita pecah value berdasarkan tanda pipa '|'
+    # Pecah value berdasarkan tanda pipa '|'
     if current_filter:
         if current_filter.startswith("cat_"):
             # Format: cat_Buku
@@ -102,7 +100,6 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
 
         elif current_filter.startswith("subsub_"):
             # Format: subsub_Buku|Agama|Lainnya
-            # Ini yang memperbaiki bug "Lainnya" nyampur
             raw = current_filter[7:]
             parts = raw.split('|')
             if len(parts) >= 3:
@@ -139,7 +136,11 @@ def build_filter_string(search_query, current_filter, current_lang, page_range):
         search_clause = f'''
         FILTER(
             REGEX(REPLACE(?Judul, "[.]", ""), "{fuzzy_pattern}", "i") ||
-            REGEX(REPLACE(?Penulis, "[.]", ""), "{fuzzy_pattern}", "i")
+            REGEX(REPLACE(?Penulis, "[.]", ""), "{fuzzy_pattern}", "i") ||
+            REGEX(STR(?KategoriUtama), "{fuzzy_pattern}", "i") ||
+            REGEX(STR(?Sub1), "{fuzzy_pattern}", "i") ||
+            REGEX(STR(?Sub2), "{fuzzy_pattern}", "i") ||
+            REGEX(STR(?Sub3), "{fuzzy_pattern}", "i")
         )
         '''
         filter_clauses.append(search_clause)
@@ -312,7 +313,7 @@ def get_author_info_from_dbpedia(author_name):
     
     SELECT DISTINCT ?author ?abstract ?birthDate ?deathDate ?thumbnail ?nationality WHERE {{
         {{
-            # Regex Match pada label nama (Paling fleksibel)
+            # Regex Match pada label nama (fleksibel)
             ?author a dbo:Writer ;
                     rdfs:label ?name .
             FILTER(LANG(?name) = "en")
@@ -368,24 +369,23 @@ def get_film_adaptation(book_title, author_name):
     
     # [LOGIKA PRIORITAS KURUNG]
     # Cek apakah ada teks dalam kurung "()", misal: "Hunger Games #2 (Catching Fire)".
-    # Kita ambil "Catching Fire" karena biasanya itu judul asli Inggrisnya.
     match = re.search(r'\((.*?)\)', book_title)
     if match:
         candidate = match.group(1).strip()
-        # Filter: Pastikan yang diambil bukan info teknis seperti "Edisi Revisi"
+        # Filter yang diambil jangan info teknis seperti "Edisi Revisi"
         blocklist = ["edisi", "cover", "terjemahan", "repubish", "hard", "soft", "bahasa", "new"]
         if not any(word in candidate.lower() for word in blocklist):
             search_term = candidate
 
     # [LOGIKA PEMBERSIHAN SIMBOL]
-    # Jika tidak ada kurung, gunakan judul utama tapi bersihkan simbol-simbol pengganggu.
+    # Jika tidak ada kurung, gunakan judul utama & hapus simbol lain
     if not search_term:
         clean = re.sub(r'#\d+', '', book_title) # Hapus nomor seri "#1", "#2"
         for char in [":", "-", ".", ",", "!", "?", "'", '"']:
             clean = clean.replace(char, " ") # Ganti simbol dengan spasi
         search_term = clean.strip()
 
-    # Ambil Keyword (Max 3 kata pertama agar pencarian tidak terlalu ketat)
+    # Ambil Keyword
     words = search_term.split()
     if len(words) > 3:
         final_keyword = " ".join(words[:3])
@@ -395,7 +395,7 @@ def get_film_adaptation(book_title, author_name):
     # [LOGIKA REGEX]
     # .replace(" ", "[\\\\s\\\\W]+")
     # Mengubah spasi biasa menjadi pola Regex: "Spasi ATAU Karakter Non-Huruf".
-    # Ini memungkinkan "Hunger Games Mockingjay" cocok dengan "Hunger Games: Mockingjay" (ada titik dua).
+    # Agar "Hunger Games Mockingjay" cocok dengan "Hunger Games: Mockingjay" (ada titik dua).
     safe_regex = final_keyword.strip().replace(" ", "[\\\\s\\\\W]+")
 
     print(f"🎬 DEBUG FILM: Regex Akhir='{safe_regex}'")
@@ -410,7 +410,6 @@ def get_film_adaptation(book_title, author_name):
         
         FILTER(LANG(?filmTitle) = "en")
         
-        # Pencarian Case Insensitive ("i") dengan Regex fleksibel tadi
         FILTER(REGEX(?filmTitle, "{safe_regex}", "i"))
 
         OPTIONAL {{ 

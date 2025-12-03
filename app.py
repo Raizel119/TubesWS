@@ -51,8 +51,6 @@ def map_book_row(row):
         "Gambar": gambar if gambar else ""
     }
 
-# --- OPTIMASI 1: CACHING SIDEBAR ---
-# Data kategori/bahasa jarang berubah. Kita cache agar tidak query berulang-ulang.
 @lru_cache(maxsize=1)
 def load_categories():
     rows = run_query(queries.GET_ALL_CATEGORIES)
@@ -89,7 +87,6 @@ def load_nested_map():
                 if sub3 and sub3 not in nested[cat][sub1][sub2]:
                     nested[cat][sub1][sub2].append(sub3)
     return nested
-# -----------------------------------
 
 def get_books(search_query="", current_filter="", current_lang="all",
                 page_range="all", sort_option="price_asc",
@@ -118,14 +115,13 @@ def build_active_filters(current_filter, current_lang, search_query, page_range,
         clean = re.sub(r'^(cat_|sub_|subsub_|sub3_)', '', current_filter)
         decoded = unquote(clean)
         
-        # FIX TAMPILAN: Jika ada pipa '|', ambil bagian paling terakhir saja untuk ditampilkan
+        # Jika ada pipa '|', ambil bagian paling terakhir saja untuk ditampilkan
         # Contoh: "Buku|Agama|Lainnya" -> Tampilkan "Lainnya"
         display_label = decoded.split('|')[-1]
         
         active.append({"key": "filter", "value": display_label})
 
     if current_lang and current_lang != "all":
-        # Ubah label bahasa untuk UI jika English -> Inggris
         lang_label = current_lang
         if current_lang == "English": lang_label = "Inggris"
         elif current_lang == "Indonesian": lang_label = "Indonesia"
@@ -158,22 +154,16 @@ def index():
     books = get_books(search_query, current_filter, current_lang, page_range, sort_option, limit=20)
     total_count = get_total_books_count(search_query, current_filter, current_lang, page_range)
 
-    # Cek apakah sedang di Home bersih
+    # Cek filter di home bersih
     is_clean_home = not (
         search_query or current_filter or current_lang != 'all'
         or page_range != 'all' or sort_option != 'price_asc'
     )
 
     grouped_books = defaultdict(list)
-    # Gunakan load_categories yang sudah di-cache (lebih cepat)
     all_categories = load_categories()
 
     if is_clean_home:
-        # --- OPTIMASI 2: EAGER LOADING (PYTHON GROUPING) ---
-        # Daripada request ke DB 20 kali (1 kali per kategori),
-        # Kita request 1 kali saja untuk ambil BANYAK data (misal 500 buku),
-        # Lalu kita sortir manual di Python. Jauh lebih cepat (mengurangi HTTP Round-trip).
-        
         # Ambil 500 buku acak/terbaru (tanpa filter)
         raw_home_books = get_books(limit=500, sort_option="date_newest") 
         
@@ -183,7 +173,6 @@ def index():
             if cat and cat in all_categories and len(grouped_books[cat]) < 10:
                 grouped_books[cat].append(b)
         
-        # Konversi defaultdict ke dict biasa agar template tidak bingung
         grouped_books = dict(grouped_books)
 
     return render_template(
@@ -191,8 +180,8 @@ def index():
         books=books,
         grouped_books=grouped_books,
         all_categories=all_categories,
-        all_languages=load_languages(), # Ini juga sekarang cached
-        nested_category_map=load_nested_map(), # Ini juga cached
+        all_languages=load_languages(),
+        nested_category_map=load_nested_map(),
         total_count=total_count,
         results_count=len(books),
         current_filter=current_filter,
@@ -218,7 +207,6 @@ def load_more():
 
 @app.route("/book/<id>")
 def detail(id):
-    # Detail buku sudah cukup eager (menarik semua properti dalam 1 query)
     rows = run_query(queries.get_book_detail_query(id))
     if not rows: abort(404)
 
@@ -274,7 +262,6 @@ def detail(id):
         author_dbpedia=author_dbpedia,
         film_dbpedia=film_dbpedia,
         more_books=more_books,
-        # Menggunakan fungsi cached agar loading detail page juga lebih cepat
         all_categories=load_categories(),
         nested_category_map=load_nested_map()
     )

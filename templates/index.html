@@ -30,7 +30,6 @@
             transform: translateY(0);
         }
         
-        /* Style Tambahan untuk Tombol Load More */
         #load-more-container {
             text-align: center;
             margin: 30px 0 50px 0;
@@ -86,7 +85,6 @@
                 <form action="/" method="GET" class="search-bar" id="navbar-search-form">
                     <span class="material-symbols-outlined" style="font-size: 20px;">search</span>
                     <input type="text" name="query" value="{{ search_query or '' }}" placeholder="Cari..." autocomplete="off">
-                    <input type="hidden" name="filter" value="{{ current_filter or '' }}">
                     <input type="hidden" name="lang" value="{{ current_lang or 'all' }}">
                     <input type="hidden" name="sort" value="{{ sort_option or 'price_asc' }}">
                 </form>
@@ -141,7 +139,7 @@
                         {% for cat, sub1_map in nested_category_map.items() %}
                         <li>
                             <div class="cat-item">
-                                <a href="/?filter=cat_{{ cat | uquote }}" 
+                                <a href="/?filter=cat_{{ cat | uquote }}&lang={{ current_lang or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
                                    class="{{ 'active' if current_filter == 'cat_' ~ cat else '' }}" onclick="showLoader()">
                                     {{ cat }}
                                 </a>
@@ -155,8 +153,8 @@
                                 {% for sub1, sub2_map in sub1_map.items() %}
                                 <li>
                                     <div class="cat-item">
-                                        <a href="/?filter=sub_{{ sub1 | uquote }}" 
-                                           class="{{ 'active' if current_filter == 'sub_' ~ sub1 else '' }}" onclick="showLoader()">
+                                        <a href="/?filter=sub_{{ cat | uquote }}|{{ sub1 | uquote }}&lang={{ current_lang or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                           class="{{ 'active' if current_filter == 'sub_' ~ cat ~ '|' ~ sub1 else '' }}" onclick="showLoader()">
                                             {{ sub1 }}
                                         </a>
                                         {% if sub2_map %}
@@ -169,8 +167,8 @@
                                         {% for sub2, sub3_list in sub2_map.items() %}
                                         <li>
                                             <div class="cat-item">
-                                                <a href="/?filter=subsub_{{ sub2 | uquote }}" 
-                                                   class="{{ 'active' if current_filter == 'subsub_' ~ sub2 else '' }}" onclick="showLoader()">
+                                                <a href="/?filter=subsub_{{ cat | uquote }}|{{ sub1 | uquote }}|{{ sub2 | uquote }}&lang={{ current_lang or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                                   class="{{ 'active' if current_filter == 'subsub_' ~ cat ~ '|' ~ sub1 ~ '|' ~ sub2 else '' }}" onclick="showLoader()">
                                                     {{ sub2 }}
                                                 </a>
                                                 {% if sub3_list %}
@@ -182,8 +180,8 @@
                                             <ul class="submenu">
                                                 {% for sub3 in sub3_list %}
                                                 <li>
-                                                    <a href="/?filter=sub3_{{ sub3 | uquote }}" 
-                                                       class="leaf-link {{ 'active' if current_filter == 'sub3_' ~ sub3 else '' }}" onclick="showLoader()">
+                                                    <a href="/?filter=sub3_{{ cat | uquote }}|{{ sub1 | uquote }}|{{ sub2 | uquote }}|{{ sub3 | uquote }}&lang={{ current_lang or 'all' }}&sort={{ sort_option or 'price_asc' }}" 
+                                                       class="leaf-link {{ 'active' if current_filter == 'sub3_' ~ cat ~ '|' ~ sub1 ~ '|' ~ sub2 ~ '|' ~ sub3 else '' }}" onclick="showLoader()">
                                                         - {{ sub3 }}
                                                     </a>
                                                 </li>
@@ -211,9 +209,7 @@
                         
                         <div class="search-bar-container" style="flex-grow: 1; position: relative; max-width: 100%;">
                             <form action="/" method="GET" class="search-bar" id="search-form" style="display: flex; align-items: center; background: #fff; border: 1px solid #e5e5e5; border-radius: 50px; padding: 12px 20px; width: 100%; box-shadow: 0 2px 5px rgba(0,0,0,0.03); position: relative;">
-                                <input type="hidden" name="filter" value="{{ current_filter or '' }}" >
                                 <input type="hidden" name="lang" value="{{ current_lang or 'all' }}" >
-                                <input type="hidden" name="page_range" value="{{ page_range or 'all' }}" >
                                 <input type="hidden" name="sort" value="{{ sort_option or 'price_asc' }}" >
                                 
                                 <span class="material-symbols-outlined" style="font-size: 22px; color: #888; flex-shrink: 0;">search</span>

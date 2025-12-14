@@ -1,6 +1,8 @@
 # queries.py
 from SPARQLWrapper import SPARQLWrapper, JSON
 import re
+import requests
+import json
 
 PREFIX = """
 PREFIX bu: <http://buku.org/buku#>
@@ -449,4 +451,52 @@ def get_film_adaptation(book_title, author_name):
         return None
     except Exception as e:
         print(f"⚠️ DBpedia Film Error: {str(e)}")
+        return None
+    
+def get_movie_trailer_link(movie_title, api_key):
+    """
+    Mencari ID video trailer YouTube untuk judul film yang diberikan menggunakan YouTube Data API v3.
+    """
+
+    if not api_key or not movie_title:
+        return None
+        
+    search_query = f"{movie_title} official trailer"
+    YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
+    
+    params = {
+        'part': 'id,snippet', 
+        'q': search_query,
+        'key': api_key,
+        'type': 'video',
+        'maxResults': 1
+    }
+    
+    try:
+        response = requests.get(YOUTUBE_SEARCH_URL, params=params, timeout=5)
+        
+        # Jika ada kode status HTTP 4xx atau 5xx, coba ekstrak pesan error JSON
+        response.raise_for_status() 
+        
+        data = response.json()
+        
+        if data and 'items' in data and data['items']:
+            video_id = data['items'][0]['id']['videoId']
+            return video_id
+        else:
+            return None
+            
+    except requests.exceptions.HTTPError as e:
+        # Menangkap error spesifik dari API (misal 403 Quota Exceeded)
+        try:
+            error_data = e.response.json()
+            error_message = error_data.get('error', {}).get('message', 'Unknown HTTP Error')
+            print(f"❌ YOUTUBE API HTTP ERROR: {error_message} (Periksa Kuota atau Kunci API)")
+        except:
+            print(f"❌ YOUTUBE API UNEXPECTED HTTP ERROR: {e}")
+        return None
+        
+    except requests.exceptions.RequestException as e:
+        # Menangkap error koneksi umum
+        print(f"❌ YOUTUBE API CONNECTION ERROR: {e}")
         return None

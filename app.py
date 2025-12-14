@@ -20,6 +20,7 @@ def about():
     return render_template("about.html") 
 
 FUSEKI_URL = "http://localhost:3030/bookara/query"
+YOUTUBE_API_KEY = "AIzaSyAwl_HZoA-QU91UxFVT1sHHPkqQNEUU-e4"
 
 def run_query(query_string):
     """
@@ -214,6 +215,7 @@ def detail(id):
     raw_deskripsi = r.get("Deskripsi", {}).get("value", "")
     clean_deskripsi = raw_deskripsi.replace("_x000D_", "<br>")
     book = {
+        # ... (bagian mapping buku tetap sama) ...
         "id": id,
         "Judul": r.get("Judul", {}).get("value", ""),
         "Penulis": r.get("Penulis", {}).get("value", ""),
@@ -236,20 +238,33 @@ def detail(id):
         "URL": r.get("URL", {}).get("value", "#")
     }
 
-    # Info Penulis dari DBpedia
+    # --- INISIALISASI SEMUA VARIABEL YANG AKAN DIKIRIM KE TEMPLATE ---
     author_dbpedia = None
+    film_dbpedia = None
+    trailer_id = None 
+    more_books = [] # <-- PERBAIKAN: Selalu inisialisasi di sini
+
+    # Info Penulis dari DBpedia
     if book["Penulis"]:
         print(f"🔍 Mencari info penulis '{book['Penulis']}' di DBpedia...")
         author_dbpedia = queries.get_author_info_from_dbpedia(book["Penulis"])
 
-    # Info Film
-    film_dbpedia = None
+    # Info Film dan Trailer
     if book["Judul"]:
         print(f"🎬 Mencari adaptasi film untuk '{book['Judul']}'...")
         film_dbpedia = queries.get_film_adaptation(book["Judul"], book["Penulis"])
+        
+        if film_dbpedia and film_dbpedia.get('title'):
+            movie_title = film_dbpedia['title']
+            print(f"▶️ Mencari link trailer untuk '{movie_title}' di YouTube...")
+            # Kunci API Anda telah dimasukkan
+            trailer_id = queries.get_movie_trailer_link(movie_title, YOUTUBE_API_KEY)
+            if trailer_id:
+                print(f"✅ Trailer ditemukan. ID: {trailer_id}")
+            else:
+                print("❌ Trailer tidak ditemukan di YouTube.")
 
-    # Rekomendasi
-    more_books = []
+    # Rekomendasi (Mengisi more_books)
     if book["Penulis"]:
         author_list = [name.strip() for name in book["Penulis"].split(',') if name.strip()]
         if author_list:
@@ -261,10 +276,13 @@ def detail(id):
         book=book,
         author_dbpedia=author_dbpedia,
         film_dbpedia=film_dbpedia,
-        more_books=more_books,
+        trailer_id=trailer_id,
+        more_books=more_books, # Sekarang dijamin terdefinisi
         all_categories=load_categories(),
         nested_category_map=load_nested_map()
     )
+
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
